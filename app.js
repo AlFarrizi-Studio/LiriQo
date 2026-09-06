@@ -10,7 +10,7 @@ const ENDPOINTS = [
   { provider: "LRC synced lyrics only", method: "GET", path: "/lrc" },
   { provider: "Unified endpoint. Auto-detect videoId / URL / ISRC / song title. Resolve metadata + find YT videoId + fetch lyrics in one go.", method: "GET", path: "/search" },
   { provider: "Force LyricFind provider (if available)", method: "GET", path: "/lyricfind" },
-  { provider: "Force Musixmatch provider (if available)", method: "GET", path: "/musixmatchD" },
+  { provider: "Force Musixmatch provider (if available)", method: "GET", path: "/musixmatch" },
 ];
 
 const API_BASE_URL = "https://api-liriqo.pages.dev/alfarrizi/v1";
