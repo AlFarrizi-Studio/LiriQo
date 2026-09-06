@@ -3,7 +3,7 @@
 > Real-time lyrics resolver powered by YouTube Music InnerTube. Pull LRC-synced or plain lyrics from **LyricFind** and **Musixmatch** via a single endpoint. Auto-detect from videoId, ISRC, title+artist, or any music provider URL (Spotify, Apple Music, Tidal, YouTube, song.link, Rythm, etc).
 
 🌐 **Website & Live Demo:** [https://api-liriqo.pages.dev/](https://api-liriqo.pages.dev/)
-📦 **Dashboard:** [https://alfarrizi-studio.github.io/Liriqo/](https://alfarrizi-studio.github.io/Liriqo/)
+📦 **Dashboard:** [https://alfarrizi-studio.github.io/Liriqo/](https://alfarrizi-studio.github.io/LiriQo/)
 
 ---
 
