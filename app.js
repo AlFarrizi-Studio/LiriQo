@@ -4,13 +4,13 @@ const LYRICS_API = _cfg.lyricsApi || "https://api-liriqo.pages.dev/alfarrizi/v1/
 const STATS_API  = _cfg.statsApi  || "https://api-liriqo.pages.dev/alfarrizi/v1/stats";
 
 const ENDPOINTS = [
-  { provider: "LyricFind/Musixmatch", method: "GET", path: "/lyrics?v=VIDEOID" },
-  { provider: "Multi-provider", method: "GET", path: "/lyrics?title=X&artist=Y&source=..." },
-  { provider: "Plain text only", method: "GET", path: "/plain?v=VIDEOID" },
-  { provider: "LRC synced", method: "GET", path: "/lrc?v=VIDEOID" },
-  { provider: "Search + paste link", method: "GET", path: "/search?q=QUERYorLINK" },
-  { provider: "Force LyricFind", method: "GET", path: "/lyricfind?v=VIDEOID" },
-  { provider: "Force Musixmatch", method: "GET", path: "/musixmatch?v=VIDEOID" },
+  { provider: "Full lyrics (plain + LRC) by YT Music videoId", method: "GET", path: "/lyrics" },
+  { provider: "Service stats + recent logs", method: "GET", path: "/stats" },
+  { provider: "Plain lyrics only", method: "GET", path: "/plain" },
+  { provider: "LRC synced lyrics only", method: "GET", path: "/lrc" },
+  { provider: "Unified endpoint. Auto-detect videoId / URL / ISRC / song title. Resolve metadata + find YT videoId + fetch lyrics in one go.", method: "GET", path: "/search" },
+  { provider: "Force LyricFind provider (if available)", method: "GET", path: "/lyricfind" },
+  { provider: "Force Musixmatch provider (if available)", method: "GET", path: "/musixmatchD" },
 ];
 
 const API_BASE_URL = "https://api-liriqo.pages.dev/alfarrizi/v1";
