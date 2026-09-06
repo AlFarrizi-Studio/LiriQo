@@ -175,17 +175,6 @@ Input (videoId | ISRC | title | URL)
 ```
 ---
 
-## 🏗️ Tech stack
-
-- **Runtime:** Cloudflare Pages Functions (V8 isolates)
-- **Storage:** Cloudflare KV (stats persistence)
-- **Lyrics source:** YouTube Music InnerTube (lyricfind + musixmatch providers)
-- **Metadata sources:** Deezer, iTunes Search API, MusicBrainz, ListenBrainz, Odesli/Songlink
-- **Frontend:** Vanilla JS, kawaii aesthetic (pink/lavender/pastel)
-- **Typography:** Quicksand, Nunito, Fira Code
-
----
-
 ## 📄 License
 
 MIT — see [LICENSE](LICENSE).
