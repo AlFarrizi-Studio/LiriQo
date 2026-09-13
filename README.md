@@ -3,7 +3,7 @@
 > Real-time multi-provider lyrics resolver. Pull **syllable / word / line-synced** lyrics and karaoke timing from **Apple Music, QQ Music, KuGou, NetEase Cloud Music, Musixmatch, LyricFind, LRCLib** and more — via a single endpoint. Auto-detect from videoId, ISRC, title+artist, or any music provider URL (Spotify, Apple Music, Tidal, YouTube, song.link, Rythm, etc).
 
 🌐 **Website & Live Demo:** [https://api-liriqo.web.app/](https://api-liriqo.web.app/)
-⚡ **API (Cloudflare Worker):** [https://api.liriqo-alfarrizi.workers.dev/v1](https://api.liriqo-alfarrizi.workers.dev/v1)
+⚡ **API:** [https://api.liriqo-alfarrizi.workers.dev/v1](https://api.liriqo-alfarrizi.workers.dev/v1)
 
 ---
 
@@ -16,7 +16,6 @@
 - 🎵 **Multi-provider URL support** — Spotify, Apple Music, Tidal, YouTube, song.link, Rythm, generic web pages
 - 📊 **Live stats dashboard** — request log, per-provider success rate & latency, error breakdown
 - 🛡️ **Resilient fallback chain** — 9 tracks from 9 providers run in **parallel** with per-provider timeout, sorted by sync quality: syllable → word → line → plain
-- 🚀 **Cloudflare Workers** — global edge, no cold start, free forever
 - 🔓 **No auth, CORS-enabled** — works from any client (browser, mobile, server)
 
 ### Lyric providers (9)
