@@ -191,6 +191,11 @@ Input (videoId | ISRC | title+artist | URL)
         ↓
    { tracks, primary, count }
 ```
+
+**QQ Music word-by-word**: encrypted QRC from `GetPlayLyricInfo` is decrypted in-worker using a custom non-standard 3DES (ported from [LDDC](https://github.com/chenmozhijin/LDDC) / [qrc-decoder](https://github.com/apoint123/qrc-decoder)) + zlib, yielding per-word karaoke timing, translations and romanization — no third-party API key needed.
+
+**YTM Line**: `ANDROID_MUSIC` InnerTube client (`timedLyricsData`) returns line-timed lyrics sourced from Musixmatch/LyricFind — no PO token required. Fallback to `IOS_MUSIC`, then `WEB_REMIX` (plain).
+
 ---
 
 ## 📄 License
