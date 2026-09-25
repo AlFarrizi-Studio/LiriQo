@@ -9,7 +9,7 @@
 ### Real-time multi-provider lyrics resolver
 
 
-**Syllable · Word · Line-synced** lyrics & karaoke timing from **9 providers** — through a **single endpoint**.
+**Syllable · Word · Line-synced** lyrics & karaoke timing from **10 providers** — through a **single endpoint**.
 
 
 [![Live Demo](https://img.shields.io/badge/%F0%9F%8C%90_Live_Demo-api--liriqo.web.app-7c3aed?style=for-the-badge&labelColor=1e1b4b)](https://api-liriqo.web.app/)
