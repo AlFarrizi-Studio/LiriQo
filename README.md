@@ -515,9 +515,6 @@ Built on the shoulders of excellent open-source work:
 <br>
 
 
-**© 2026 AlFarrizi-Studio. All Rights Reserved.**
-
-
 [⬆ Back to top](#-liriqo-lyrics-api)
 
 
