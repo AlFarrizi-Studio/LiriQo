@@ -9,11 +9,11 @@
 ### Real-time multi-provider lyrics resolver
 
 
-**Syllable · Word · Line-synced** lyrics & karaoke timing from **10 providers** — through a **single endpoint**.
+**Syllable · Word · Line-synced** lyrics & karaoke timing from **8 providers** — through a **single endpoint**.
 
 
 [![Live Demo](https://img.shields.io/badge/%F0%9F%8C%90_Live_Demo-api--liriqo.web.app-7c3aed?style=for-the-badge&labelColor=1e1b4b)](https://api-liriqo.web.app/)
-[![API Base](https://img.shields.io/badge/%E2%9A%A1_API_Endpoint-v1-0ea5e9?style=for-the-badge&labelColor=082f49)](https://api.liriqo-alfarrizi.workers.dev/v1)
+[![API Base](https://img.shields.io/badge/%E2%9A%A1_API_Endpoint-v1-0ea5e9?style=for-the-badge&labelColor=082f49)](https://api.liriqo-alfarrizi.my.id/v1)
 [![Providers](https://img.shields.io/badge/Providers-10-22c55e?style=for-the-badge&labelColor=052e16)](#-lyric-providers)
 [![Auth](https://img.shields.io/badge/Auth-None%20Required-f59e0b?style=for-the-badge&labelColor=451a03)](#-features)
 [![CORS](https://img.shields.io/badge/CORS-Enabled-ec4899?style=for-the-badge&labelColor=500724)](#-features)
@@ -147,20 +147,20 @@ Request log, per-provider success rate, latency metrics & error breakdown.
 
 **Base URL:**
 ```
-https://api.liriqo-alfarrizi.workers.dev/v1
+https://api.liriqo-alfarrizi.my.id/v1
 ```
 
 
 | Method | Path | Description |
 |:--:|:--|:--|
-| `GET` | [`/lyrics`](https://api.liriqo-alfarrizi.workers.dev/v1/lyrics?v=HaEYUJ2aRHs) | 🌟 **All available lyrics** from 9 providers, sorted by sync quality |
-| `GET` | [`/lrc`](https://api.liriqo-alfarrizi.workers.dev/v1/lrc?v=HaEYUJ2aRHs) | LRC synced lyrics only (`text/plain`) |
-| `GET` | [`/plain`](https://api.liriqo-alfarrizi.workers.dev/v1/plain?v=HaEYUJ2aRHs) | Plain text lyrics only (JSON) |
-| `GET` | [`/ttml`](https://api.liriqo-alfarrizi.workers.dev/v1/ttml?v=HaEYUJ2aRHs) | Raw TTML — Apple Music syllable format |
-| `GET` | [`/search`](https://api.liriqo-alfarrizi.workers.dev/v1/search?Q=Dynamite+BTS) | Resolve `videoId` + metadata only (no lyrics fetch) |
-| `GET` | [`/stats`](https://api.liriqo-alfarrizi.workers.dev/v1/stats) | 📊 Live stats: requests, per-provider perf, request log |
-| `GET` | [`/health`](https://api.liriqo-alfarrizi.workers.dev/v1/health) | Health check (`?upstream=1` tests all 7 upstreams) |
-| `GET` | [`/`](https://api.liriqo-alfarrizi.workers.dev/v1) | Endpoint list / docs (JSON or HTML) |
+| `GET` | [`/lyrics`](https://api.liriqo-alfarrizi.my.id/v1/lyrics?v=HaEYUJ2aRHs) | 🌟 **All available lyrics** from 9 providers, sorted by sync quality |
+| `GET` | [`/lrc`](https://api.liriqo-alfarrizi.my.id/v1/lrc?v=HaEYUJ2aRHs) | LRC synced lyrics only (`text/plain`) |
+| `GET` | [`/plain`](https://api.liriqo-alfarrizi.my.id/v1/plain?v=HaEYUJ2aRHs) | Plain text lyrics only (JSON) |
+| `GET` | [`/ttml`](https://api.liriqo-alfarrizi.my.id/v1/ttml?v=HaEYUJ2aRHs) | Raw TTML — Apple Music syllable format |
+| `GET` | [`/search`](https://api.liriqo-alfarrizi.my.id/v1/search?Q=Dynamite+BTS) | Resolve `videoId` + metadata only (no lyrics fetch) |
+| `GET` | [`/stats`](https://api.liriqo-alfarrizi.my.id/v1/stats) | 📊 Live stats: requests, per-provider perf, request log |
+| `GET` | [`/health`](https://api.liriqo-alfarrizi.my.id/v1/health) | Health check (`?upstream=1` tests all 7 upstreams) |
+| `GET` | [`/`](https://api.liriqo-alfarrizi.my.id/v1) | Endpoint list / docs (JSON or HTML) |
 
 
 ### 🔧 Smart Parameters
@@ -195,7 +195,7 @@ Accepted by `/lyrics` & `/search`:
 
 
 ```bash
-curl "https://api.liriqo-alfarrizi.workers.dev/v1/lyrics?v=HaEYUJ2aRHs"
+curl "https://api.liriqo-alfarrizi.my.id/v1/lyrics?v=HaEYUJ2aRHs"
 ```
 </details>
 
@@ -205,7 +205,7 @@ curl "https://api.liriqo-alfarrizi.workers.dev/v1/lyrics?v=HaEYUJ2aRHs"
 
 
 ```bash
-curl "https://api.liriqo-alfarrizi.workers.dev/v1/lrc?v=HaEYUJ2aRHs"
+curl "https://api.liriqo-alfarrizi.my.id/v1/lrc?v=HaEYUJ2aRHs"
 ```
 </details>
 
@@ -215,7 +215,7 @@ curl "https://api.liriqo-alfarrizi.workers.dev/v1/lrc?v=HaEYUJ2aRHs"
 
 
 ```bash
-curl "https://api.liriqo-alfarrizi.workers.dev/v1/ttml?v=HaEYUJ2aRHs"
+curl "https://api.liriqo-alfarrizi.my.id/v1/ttml?v=HaEYUJ2aRHs"
 ```
 </details>
 
@@ -225,7 +225,7 @@ curl "https://api.liriqo-alfarrizi.workers.dev/v1/ttml?v=HaEYUJ2aRHs"
 
 
 ```bash
-curl "https://api.liriqo-alfarrizi.workers.dev/v1/lyrics?Q=Dynamite+BTS"
+curl "https://api.liriqo-alfarrizi.my.id/v1/lyrics?Q=Dynamite+BTS"
 ```
 </details>
 
@@ -235,7 +235,7 @@ curl "https://api.liriqo-alfarrizi.workers.dev/v1/lyrics?Q=Dynamite+BTS"
 
 
 ```bash
-curl "https://api.liriqo-alfarrizi.workers.dev/v1/lyrics?isrc=QM7282022872"
+curl "https://api.liriqo-alfarrizi.my.id/v1/lyrics?isrc=QM7282022872"
 ```
 </details>
 
@@ -245,7 +245,7 @@ curl "https://api.liriqo-alfarrizi.workers.dev/v1/lyrics?isrc=QM7282022872"
 
 
 ```bash
-curl "https://api.liriqo-alfarrizi.workers.dev/v1/lyrics?url=https://open.spotify.com/track/3a1lNhkSLSkpJE4MSHpDu9"
+curl "https://api.liriqo-alfarrizi.my.id/v1/lyrics?url=https://open.spotify.com/track/3a1lNhkSLSkpJE4MSHpDu9"
 ```
 </details>
 
@@ -254,7 +254,7 @@ curl "https://api.liriqo-alfarrizi.workers.dev/v1/lyrics?url=https://open.spotif
 
 
 ```js
-const res = await fetch('https://api.liriqo-alfarrizi.workers.dev/v1/lyrics?v=HaEYUJ2aRHs');
+const res = await fetch('https://api.liriqo-alfarrizi.my.id/v1/lyrics?v=HaEYUJ2aRHs');
 const data = await res.json();
 ```
 
