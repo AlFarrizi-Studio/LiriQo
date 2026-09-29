@@ -14,7 +14,7 @@
 
 [![Live Demo](https://img.shields.io/badge/%F0%9F%8C%90_Live_Demo-api--liriqo.web.app-7c3aed?style=for-the-badge&labelColor=1e1b4b)](https://api-liriqo.web.app/)
 [![API Base](https://img.shields.io/badge/%E2%9A%A1_API_Endpoint-v1-0ea5e9?style=for-the-badge&labelColor=082f49)](https://api.liriqo-alfarrizi.my.id/v1)
-[![Providers](https://img.shields.io/badge/Providers-10-22c55e?style=for-the-badge&labelColor=052e16)](#-lyric-providers)
+[![Providers](https://img.shields.io/badge/Providers-8-22c55e?style=for-the-badge&labelColor=052e16)](#-lyric-providers)
 [![Auth](https://img.shields.io/badge/Auth-None%20Required-f59e0b?style=for-the-badge&labelColor=451a03)](#-features)
 [![CORS](https://img.shields.io/badge/CORS-Enabled-ec4899?style=for-the-badge&labelColor=500724)](#-features)
 [![License](https://img.shields.io/badge/License-MIT-blueviolet?style=for-the-badge&labelColor=2e1065)](LICENSE)
