@@ -153,7 +153,7 @@ https://api.liriqo-alfarrizi.my.id/v1
 
 | Method | Path | Description |
 |:--:|:--|:--|
-| `GET` | [`/lyrics`](https://api.liriqo-alfarrizi.my.id/v1/lyrics?v=HaEYUJ2aRHs) | 🌟 **All available lyrics** from 9 providers, sorted by sync quality |
+| `GET` | [`/lyrics`](https://api.liriqo-alfarrizi.my.id/v1/lyrics?v=HaEYUJ2aRHs) | 🌟 **All available lyrics** from 8 providers, sorted by sync quality |
 | `GET` | [`/lrc`](https://api.liriqo-alfarrizi.my.id/v1/lrc?v=HaEYUJ2aRHs) | LRC synced lyrics only (`text/plain`) |
 | `GET` | [`/plain`](https://api.liriqo-alfarrizi.my.id/v1/plain?v=HaEYUJ2aRHs) | Plain text lyrics only (JSON) |
 | `GET` | [`/ttml`](https://api.liriqo-alfarrizi.my.id/v1/ttml?v=HaEYUJ2aRHs) | Raw TTML — Apple Music syllable format |
