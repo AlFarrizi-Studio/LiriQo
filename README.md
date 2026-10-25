@@ -52,6 +52,7 @@
   - [Pipeline Flow](#pipeline-flow)
   - [QRC Decryption](#qrc-decryption-qq-music)
   - [YTM InnerTube Strategy](#ytm-innertube-strategy)
+- [🙏 Credits](#-credits)
 - [📜 License](#-license)
 
 
@@ -514,6 +515,23 @@ IOS_MUSIC      ──▶  timedLyricsData
       ▼
 WEB_REMIX      ──▶  plain lyrics (last resort)
 ```
+
+
+---
+
+
+## 🙏 Credits
+
+
+Built on the shoulders of excellent open-source work:
+
+
+| Project | Used For |
+|:--|:--|
+| [chenmozhijin/LDDC](https://github.com/chenmozhijin/LDDC) | QRC / KRC decryption technique |
+| [apoint123/qrc-decoder](https://github.com/apoint123/qrc-decoder) | QRC 3DES implementation reference |
+| [lrclib.net](https://lrclib.net) | Open synced-lyrics database |
+| [unison.boidu.dev](https://unison.boidu.dev) | Community lyric database |
 
 
 ---
