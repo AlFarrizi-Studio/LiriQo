@@ -17,6 +17,7 @@
 [![Providers](https://img.shields.io/badge/Providers-7-22c55e?style=for-the-badge&labelColor=052e16)](#-lyric-providers)
 [![Auth](https://img.shields.io/badge/Auth-None%20Required-f59e0b?style=for-the-badge&labelColor=451a03)](#-features)
 [![CORS](https://img.shields.io/badge/CORS-Enabled-ec4899?style=for-the-badge&labelColor=500724)](#-features)
+[![Security](https://img.shields.io/badge/%F0%9F%9B%A1%EF%B8%8F_WAF_%2B_Throttled-ef4444?style=for-the-badge&labelColor=450a0a)](#-features)
 [![License](https://img.shields.io/badge/License-MIT-blueviolet?style=for-the-badge&labelColor=2e1065)](LICENSE)
 
 
@@ -93,13 +94,42 @@ Pass `?v=`, `?Q=`, `?isrc=`, `?url=`, or `?title=&artist=` — the router figure
 QQ Music, KuGou & NetEase Cloud Music via **direct API** using the [LDDC](https://github.com/chenmozhijin/LDDC) technique — QRC/KRC decrypted **in-worker**. No third-party proxy, no API keys.
 
 
-### 🛡️ Resilient Fallback Chain
+### 🛡️ Layered Defense & Provider Priority
 All providers run in **parallel** with per-provider timeouts, then sorted by sync quality:
-`syllable → word → line → plain`
+`syllable → word → line → plain` — with a definitive fallback chain:
+**Apple Music → Unison → LRCLIB → QQ Music → KuGou → NetEase → YTM**
+
+Lookups wait **tier-progressively** — they only settle once the best available sync tier
+(syllable/word → line → plain) is confirmed or provably unavailable, and providers without
+a match are skipped automatically.
 
 
-### 📊 Live Stats Dashboard
-Request log, per-provider success rate, latency metrics & error breakdown.
+### 📊 Live Stats Dashboard & Anti-Abuse Feed
+Request log, per-provider success rate, latency metrics, error breakdown — plus a
+**blocked-request counter**, **top-IP view** (masked on public access) and a **WAF ban feed**
+with referenceable Ban IDs.
+
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+
+### 🛡️ Layered Request Defense
+**Edge WAF**, per-IP throttling, an invisible IP-bound challenge and reputation-based
+auto-ban keep spam, scanners and botnets away from the lyrics providers — every automatic
+ban carries a referenceable **Ban ID** and an operator alert.
+
+
+</td>
+<td width="50%" valign="top">
+
+
+### ⚡ Edge-Cached, Quality-Gated
+Heavy endpoints are served from the **Cloudflare edge** with a short deterministic TTL —
+and the origin only allows **complete** results into the cache, so a cached response is
+never a half-answer (quality-gated at the source).
 
 
 </td>
@@ -186,7 +216,7 @@ https://api.liriqo-alfarrizi.my.id/v1
 | `GET` | [`/plain`](https://api.liriqo-alfarrizi.my.id/v1/plain?v=HaEYUJ2aRHs) | Plain text lyrics only (JSON) |
 | `GET` | [`/ttml`](https://api.liriqo-alfarrizi.my.id/v1/ttml?v=HaEYUJ2aRHs) | Raw TTML — Apple Music syllable format |
 | `GET` | [`/search`](https://api.liriqo-alfarrizi.my.id/v1/search?Q=Dynamite+BTS) | Resolve `videoId` + metadata only (no lyrics fetch) |
-| `GET` | [`/stats`](https://api.liriqo-alfarrizi.my.id/v1/stats) | 📊 Live stats: requests, per-provider perf, request log |
+| `GET` | [`/stats`](https://api.liriqo-alfarrizi.my.id/v1/stats) | 📊 Live stats: requests, per-provider perf, request log, WAF ban feed (masked IPs) |
 | `GET` | [`/health`](https://api.liriqo-alfarrizi.my.id/v1/health) | Health check (`?upstream=1` tests all 5 upstreams) |
 | `GET` | [`/`](https://api.liriqo-alfarrizi.my.id/v1) | Endpoint list / docs (JSON or HTML) |
 
@@ -424,6 +454,9 @@ for (const line of primary.timed) {
 
 
   "errorCounts": { "provider error": 16 },
+  "blockedCount": 2243,
+  "ips": [ { "ip": "203.0.***.***", "count": 28 } ],
+  "banned": { "count": 31, "list": [ { "id": 31, "ip": "203.0.***.***", "reason": "WAF: repeated abuse" } ] },
 
 
   "recentLog": [
@@ -455,6 +488,8 @@ for (const line of primary.timed) {
 ┌──────────────────────────────────────────────────────────────┐
 │  INPUT:  videoId  │  ISRC  │  title + artist  │  provider URL │
 └───────────────────────────────┬──────────────────────────────┘
+                                ▼
+        WAF + per-IP throttle + invisible challenge (abuse filtered early)
                                 ▼
               buildTracksResponse()  ── resolve videoId & metadata
                                 ▼
