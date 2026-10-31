@@ -1,0 +1,12 @@
+﻿{
+  "name": "liriqo-lyrics-parser",
+  "version": "1.0.0",
+  "description": "Standalone lyrics parser for the LiriQo API - word/syllable sync, background vocals, singer agents, songwriters, translations and instrumentals for all 7 LiriQo providers.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "scripts": { "demo": "node test/demo.mjs" },
+  "keywords": ["liriqo", "lyrics", "lrc", "ttml", "qrc", "karaoke", "word-sync", "apple-music", "qq-music", "kugou", "netease", "lrclib"],
+  "engines": { "node": ">=16" },
+  "license": "MIT"
+}
