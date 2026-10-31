@@ -49,6 +49,7 @@
 - [📊 Response Format](#response-format)
   - [`/lyrics` Payload](#lyrics--full-payload)
   - [`/stats` Payload](#stats--live-dashboard)
+- [🧠 Lyrics Parser](#-lyrics-parser)
 - [🔍 How It Works](#how-it-works)
   - [Pipeline Flow](#pipeline-flow)
   - [QRC Decryption](#qrc-decryption-qq-music)
@@ -83,7 +84,7 @@ Pass `?v=`, `?Q=`, `?isrc=`, `?url=`, or `?title=&artist=` — the router figure
 - **Apple Music** syllable-level TTML with word-level span timing
 - **QQ Music** word-by-word QRC + translation + romanization
 - **KuGou** word-by-word KRC
-- **LRCLib** proportional word-sync distribution
+- **Unison** community word sync
 
 
 </td>
@@ -159,7 +160,7 @@ never a half-answer (quality-gated at the source).
 | 🤝 | **Unison** *(unison_community)* | `any` | Community DB (unison.boidu.dev) | Vote counts |
 | 🐧 | **QQ Music** *(qq_portato)* | 🥈 `word` | Direct `musicu.fcg` (LDDC) | Karaoke words, translation, romanization |
 | 🎼 | **KuGou** *(kugou_legato)* | 🥈 `word` | Direct `lyrics.kugou.com` (LDDC) | Karaoke words |
-| 📚 | **LRCLib** *(lrclib + lrclib_wordsync)* | 🥈 `word` + 🥉 `line` | lrclib.net | Word timing via proportional distribution |
+| 📚 | **LRCLib** *(lrclib)* | 🥉 `line` | lrclib.net | Open synced-lyrics database |
 | ▶️ | **YTM Line** *(ytm_line)* | 🥉 `line` | YouTube Music `timedLyricsData`<br>(Musixmatch / LyricFind) | Multi-client InnerTube<br>(web / android / ios) |
 | ☁️ | **NetEase Cloud Music** *(netease)* | 🥉 `line` | music.163.com | Translation |
 
@@ -167,7 +168,8 @@ never a half-answer (quality-gated at the source).
 <br>
 
 
-> 💡 Each provider can return **one or more tracks** (e.g. LRCLib emits two variants: `lrclib` line + `lrclib_wordsync` word) — up to **9 tracks** per song in total.
+> 💡 Each provider can return **one or more tracks** (e.g. Apple Music may emit several
+> matching versions, strictly filtered on title + artist) — multiple tracks per song in total.
 
 
 </details>
@@ -332,11 +334,11 @@ const data = await res.json();
 | `data.tier` | `string` | 🛣️ Tier of the primary track: `Jagorawi` · `Cipali` · `Bocimi` |
 | `data.primary` | `object` | 🌟 Best track (highest sync quality) |
 | `data.tracks[]` | `array` | All tracks returned by every provider |
-| `└ .provider` | `string` | `"apple_music_liriqo"` · `"qq_portato"` · `"kugou_legato"` · `"lrclib_wordsync"` · `"unison_community"` · `"ytm_line"` · `"netease"` |
+| `└ .provider` | `string` | `"apple_music_liriqo"` · `"qq_portato"` · `"kugou_legato"` · `"unison_community"` · `"ytm_line"` · `"netease"` · `"lrclib"` |
 | `└ .syncLevel` | `string` | `"syllable"` · `"word"` · `"line"` · `"plain"` |
 | `└ .tier` | `string` | `Jagorawi` · `Cipali` · `Bocimi` |
 | `└ .plain` | `string` | Plain-text lyrics |
-| `└ .timed[]` | `array` | `[{ text, start, end, id, songPart?, words? }]` |
+| `└ .timed[]` | `array` | `[{ text, start, end, id, songPart?, words?, agent? }]` |
 | `└ .words?[]` | `array` | Per-word timing per line: `[[{ text, start, end }]]` |
 | `└ .lrc?` / `.ttml?` | `string` | Apple Music raw LRC / TTML |
 | `└ .qrc?` / `.krc?` | `string` | QQ / KuGou raw karaoke format |
@@ -348,7 +350,28 @@ const data = await res.json();
 </details>
 
 
-**Rendering word-level karaoke:**
+**🎤 Karaoke-ready in one call — the official parser:**
+
+
+```js
+import { getLiriQoLyrics } from "./lyrics-parser/src/index.js";
+
+const { richsynced } = await getLiriQoLyrics("HaEYUJ2aRHs", {
+  duration: 200, song: "Dynamite", artist: "BTS",
+});
+
+for (const line of richsynced.lyrics) {
+  if (line.isInstrumental) continue;
+  if (line.agent) console.log("singer:", line.agent);   // duet: v1 / v2, group: v1000
+  for (const part of line.parts ?? []) {
+    if (part.isBackground) continue;                     // background vocals — render separately
+    scheduleHighlight(part.words, part.startTimeMs, part.startTimeMs + part.durationMs);
+  }
+}
+```
+
+
+**Rendering word-level karaoke (raw API, without the parser):**
 
 
 ```js
@@ -411,7 +434,6 @@ for (const line of primary.timed) {
       "timed": [ "… lines with words[]" ], "lrc": "[ti:…]", "ttml": "<tt …>",
       "upstreamProvider": "Apple Music" },
     { "provider": "unison_community",   "syncLevel": "word",     "tier": "Jagorawi", "timed": [ "..." ] },
-    { "provider": "lrclib_wordsync",    "syncLevel": "word",     "tier": "Jagorawi", "timed": [ "..." ] },
     { "provider": "qq_portato",         "syncLevel": "word",     "tier": "Jagorawi",
       "timed": [ "..." ], "words": [ "..." ], "translation": "...", "romanization": "..." },
     { "provider": "kugou_legato",       "syncLevel": "word",     "tier": "Jagorawi", "timed": [ "..." ] },
@@ -473,6 +495,66 @@ for (const line of primary.timed) {
 }
 ```
 </details>
+
+
+---
+
+
+## 🧠 Lyrics Parser
+
+
+The official **client-side parser** ships in this repo under
+[`lyrics-parser/`](lyrics-parser/README.md) — a zero-dependency (vendored)
+ES-module library that turns any `/lyrics` response into karaoke-ready,
+Better-Lyrics-compatible lyric objects for **all 7 providers**:
+
+
+- **Per-syllable karaoke** from Apple Music / Unison **TTML** and QQ Music **QRC**
+- **Background vocals** — `parts[]` with `isBackground` (Apple Music, rendered separately)
+- **Singer agents** — `agent: "v1" | "v2"` for duets, `"v1000"` for group vocals
+  (QRC singer tags + TTML `ttm:agent`)
+- **Instrumental lines** — `isInstrumental` markers auto-inserted into silent gaps > 5s
+- **Songwriters** — extracted from TTML metadata and QRC credit lines
+- **Per-line translations** — QQ Music / NetEase, attached 1:1 (`translation`, `translations`)
+- **True-window word re-distribution** — KuGou/LRCLib word timing rebuilt against real
+  line boundaries from a line-synced anchor track (no more rigid `start + 5000ms` windows)
+- **Quality routing** — visits `tracks` in the server's quality order with per-data-type
+  fallbacks (`TTML → QRC → word builder`), duration-fit guards and placeholder rejection
+
+
+```js
+import { getLiriQoLyrics } from "./lyrics-parser/src/index.js";
+
+const result = await getLiriQoLyrics("HaEYUJ2aRHs", {
+  duration: 200, song: "Dynamite", artist: "BTS",
+});
+
+result.richsynced; // 🥇 word/syllable karaoke (+ agents, background vocals, songwriters)
+result.synced;     // 🥈 line-synced fallback
+result.plain;      // 🥉 unsynced fallback
+result.provider;   // winning provider, e.g. "apple_music_liriqo"
+```
+
+Every parsed line looks like:
+
+```jsonc
+{
+  "startTimeMs": 200,
+  "words": "'Cause, ah-ah, I'm in the stars tonight",
+  "durationMs": 2968,
+  "parts": [
+    { "startTimeMs": 200, "words": "'Cause,", "durationMs": 344 },
+    { "startTimeMs": 544, "words": " ", "durationMs": 0 },
+    { "startTimeMs": 544, "words": "ah-", "durationMs": 470, "isBackground": true }
+  ],
+  "agent": "v1",
+  "isInstrumental": false,
+  "translation": { "text": "…", "lang": "zh" }
+}
+```
+
+Full API reference: [`lyrics-parser/README.md`](lyrics-parser/README.md) ·
+Live demo: `node lyrics-parser/test/demo.mjs`
 
 
 ---
@@ -567,6 +649,8 @@ Built on the shoulders of excellent open-source work:
 | [apoint123/qrc-decoder](https://github.com/apoint123/qrc-decoder) | QRC 3DES implementation reference |
 | [lrclib.net](https://lrclib.net) | Open synced-lyrics database |
 | [unison.boidu.dev](https://unison.boidu.dev) | Community lyric database |
+| [Better Lyrics / @braccato](https://github.com/better-lyrics) | Client-side TTML / LRC / QRC parsers (vendored in `lyrics-parser/`) |
+| [fast-xml-parser](https://github.com/NaturalIntelligence/fast-xml-parser) | XML parsing for TTML (vendored in `lyrics-parser/`) |
 
 
 ---
@@ -587,4 +671,4 @@ Built on the shoulders of excellent open-source work:
 [⬆ Back to top](#-liriqo-lyrics-api)
 
 
-</div> 
+</div>
