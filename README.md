@@ -35,34 +35,30 @@
 
 ## ✨ Overview
 
-LiriQo resolves song metadata, requests available lyrics from multiple providers, and returns **normalized timing with provider attribution**. Public client endpoints do not require an API key, but requests remain subject to quotas, capacity limits, and abuse protection.
+LiriQo brings lyrics from multiple music sources together through a single, developer-friendly API. Get normalized lyrics, timestamped lines, and native karaoke timing where available — with source attribution so your application can display the right credits.
 
-| 🎤 Karaoke-ready | 🧭 Smart fallback | 🔌 Flexible inputs | 🛡️ Server protection |
+| 🎤 Karaoke-ready | 🧭 Smart selection | 🔎 Flexible search | 🧩 Easy integration |
 | :--- | :--- | :--- | :--- |
-| Native TTML, richsync, YRC, KRC and QRC timing | Prioritizes native word/syllable → line → plain tracks | Video IDs, titles, artists, ISRCs and supported URLs | Quotas, caching, bounded provider requests and WAF/ban controls |
+| Syllable/word timing, synced lines, and plain text | Prefers richer synchronization when available | Video ID, song metadata, ISRC, and supported URLs | JSON responses, format exports, and a client parser |
 
-- 🎤 **Native karaoke timing:** Apple Music TTML, Musixmatch richsync, NetEase YRC, KuGou KRC and QQ Music QRC.
-
-- 🏆 **Quality-aware selection:** word/syllable timing first, then line timing, then plain text, with a separate provider order for each tier.
-
-- 🔎 **Multiple inputs:** YouTube video ID, title and artist, search query, ISRC, or supported YouTube/Spotify URLs.
-
-- 🧩 **Client parser:** preserves native word boundaries, singer agents, background vocals and attribution when supplied.
-
-- 🛡️ **Operational controls:** bounded provider work, timeouts, request coalescing, caching, WAF/ban handling and public IP masking.
+- 🎶 **Multiple lyric formats:** Apple Music TTML, Musixmatch richsync, NetEase YRC, KuGou KRC, QQ Music QRC, plus LRC and plain text.
+- 🏆 **Quality-aware results:** Native syllable/word timing, line-synced lyrics, and plain lyrics, with graceful fallback when a richer format is unavailable.
+- 🌐 **One public API:** Use the same endpoint for search-based lyrics retrieval and normalized responses.
+- 🎙️ **Rich lyric metadata:** Singer agents, background vocals, translations, romanization, and source details where provided.
+- 🧩 **Client parser:** Integrate ready-to-render lyrics into JavaScript applications.
 
 > [!NOTE]
-> **Implementation scope:** this README describes the current Node/Termux server in [`termux-server/server.mjs`](termux-server/server.mjs) and the client parser in [`lyrics-parser/`](lyrics-parser/README.md). The public API reported version `1.5.1` when checked on November 2, 2026. The root `src/` + `wrangler.toml` contain an older Cloudflare Worker implementation; its provider set, ranking and behavior are not identical.
+> Format support varies by song and provider. Public API behavior may evolve with future releases; always handle missing optional fields gracefully.
 
 ## 🧭 Table of contents
 
-| Get started | Reference & internals |
+| Get started | Documentation |
 | :--- | :--- |
 | [🚀 Quick start](#quick-start) | [📦 Response format](#response-format) |
 | [🎼 Providers](#providers) | [🧩 Lyrics parser](#lyrics-parser) |
-| [🏆 Sync tiers & priority](#sync-tiers-and-provider-priority) | [🔄 Resolution pipeline](#resolution-pipeline) |
-| [📡 API reference](#api-reference) | [🛡️ Caching, security & statistics](#caching-security-and-statistics) |
-| [🎶 Lyrics inputs](#lyrics-inputs) | [🗂️ Repository & validation](#repository-and-validation) |
+| [🏆 Sync levels](#sync-levels) | [🔄 How LiriQo works](#how-liriqo-works) |
+| [📡 API reference](#api-reference) | [💡 Usage guidelines](#usage-guidelines) |
+| [🎶 Lyrics inputs](#lyrics-inputs) | [🔗 Project links](#project-links) |
 | [🚨 Errors & retries](#errors-and-retries) | [🙌 Credits](#credits) · [📄 License](#license) · [⭐ Star History](#star-history) |
 
 ## 🚀 Quick start
@@ -70,7 +66,7 @@ LiriQo resolves song metadata, requests available lyrics from multiple providers
 **🌐 Public API base URL:** [`https://api.liriqo-alfarrizi.my.id/v1`](https://api.liriqo-alfarrizi.my.id/v1)
 
 > [!TIP]
-> Public client endpoints do not require an API key. Respect rate limits and honor `Retry-After` when returned.
+> Standard public requests do not require an API key. If you receive `429`, follow the `Retry-After` header when available.
 
 ### 💻 cURL
 
@@ -121,81 +117,66 @@ Use embedded `timed[].words` first, with top-level `words[line.id]` as a compati
 
 ## 🎼 Providers
 
-The current server schedules **8 provider adapters**. LyricFind can appear as the source behind YouTube Music; it is not a ninth direct adapter.
+LiriQo integrates **8 lyric providers**. LyricFind can appear as an attributed lyric source through YouTube Music; it is **not** a separate direct provider.
 
-| Provider | API provider ID | Supported timing | Format and notes |
+| Provider | `provider` ID | Available lyric types | Notes |
 | --- | --- | --- | --- |
-| 🍎 **Apple Music** | `apple_music_liriqo` | `syllable`, `word`, `line`, `plain` | Apple Music TTML retrieved through lrc.red, plus normalized timing; singer agents and background vocals when present. ISRC/name-based lookup. |
-| 🎤 **Musixmatch** | `musixmatch` | **`word`** | Direct native richsync. The adapter is separate from Musixmatch lyrics obtained through YouTube Music. Only native richsync results are accepted. |
-| 🤝 **Unison** | `unison_community` | `syllable`, `line`, `plain`, depending on the submission | Community TTML/LRC/plain lyrics. Word/syllable units inside TTML are emitted under `syllable` when normalized words exist. |
-| ☁️ **NetEase Cloud Music** | `netease` | **`word`**, `line`, `plain` | Native **YRC** word timing first; LRC/plain fallback. Translation when supplied. `nativeWordTiming` identifies native word output. |
-| 🎶 **KuGou** | `kugou_legato` | **`word`**, `line` | KRC decoded server-side into native per-word timing; decoded `krc` may also be returned. |
-| 🎧 **QQ Music** | `qq_portato` | **`word`**, `line` | QRC decrypted server-side; translations and romanization when available. |
-| 📚 **LRCLib** | `lrclib` | **`line`, `plain` only** | Synced LRC or unsynced text. The current service does **not** generate proportional word timing. |
-| ▶️ **YouTube Music** | `ytm_line` | `line`, `plain` | InnerTube timed/plain lyrics; `lyricsSource` and `upstreamProvider` preserve Musixmatch/LyricFind attribution when known. |
+| 🍎 **Apple Music** | `apple_music_liriqo` | `syllable`, `word`, `line`, `plain` | TTML lyrics with singer and background-vocal details where available. |
+| 🎤 **Musixmatch** | `musixmatch` | `word` | Native richsync lyrics when available. |
+| 🤝 **Unison** | `unison_community` | `syllable`, `line`, `plain` | Community-contributed TTML, LRC, or plain lyrics; availability depends on the submission. |
+| ☁️ **NetEase Cloud Music** | `netease` | `word`, `line`, `plain` | Native YRC timing when available; LRC/plain alternatives. |
+| 🎶 **KuGou** | `kugou_legato` | `word`, `line` | KRC-based word timing and synced lyrics. |
+| 🎧 **QQ Music** | `qq_portato` | `word`, `line` | QRC word timing; translation or romanization may be included. |
+| 📚 **LRCLib** | `lrclib` | `line`, `plain` | LRC synced lyrics and plain text; no native word timing. |
+| ▶️ **YouTube Music** | `ytm_line` | `line`, `plain` | Synced or plain lyrics with upstream source attribution where available. |
 
 > [!IMPORTANT]
-> **Provider support ≠ availability for every song.** A provider can have native word support while returning only line timing for a particular song. For example, NetEase falls back to LRC when usable YRC is absent. Providers that fail, time out or have no matching lyrics do not contribute a track.
+> **Supported formats are not guaranteed for every song.** Results depend on music catalog matching and source availability. Always check `syncLevel` and confirm that timing data is usable before enabling synchronized highlighting.
 
-The current YTM wrapper can label plain text stored in zero-timestamp entries as `line`. Validate that line windows have `end > start` before enabling synchronized playback; the parser rejects invalid timing and can still use the text as a plain fallback.
+A response can contain fewer than eight tracks, and some queries may return no usable lyric results.
 
-Client API-key-free access does not imply credential-free upstreams. Provider availability depends on the server's upstream configuration and sessions, particularly for direct Musixmatch and some metadata lookups.
+## 🏆 Sync levels
 
-## 🏆 Sync tiers and provider priority
+LiriQo groups lyrics into three quality levels:
 
-| Tier | `syncLevel` | Meaning |
+| Tier | `syncLevel` | Best for |
 | --- | --- | --- |
-| 🥇 **Jagorawi** | `syllable` or `word` | Native karaoke timing |
-| 🥈 **Cipali** | `line` | Timestamped lyric lines |
-| 🥉 **Bocimi** | `plain` | Text without playback timing |
+| 🥇 **Jagorawi** | `syllable` or `word` | Karaoke-style word and syllable highlighting |
+| 🥈 **Cipali** | `line` | Highlighting the current lyric line |
+| 🥉 **Bocimi** | `plain` | Lyrics display without playback synchronization |
 
-Word and syllable tracks share the **same quality tier**. The current service does not automatically rank every syllable track above every word track; provider priority breaks ties within Jagorawi.
+When multiple results are available, LiriQo generally prefers more detailed synchronization while maintaining a fallback to line-based or plain lyrics. Word and syllable tracks share the same top tier; the exact provider selected can depend on the song.
 
-**🥇 Native word/syllable priority:**
-
-```text
-Apple Music → Musixmatch → Unison → NetEase → KuGou → QQ Music
-```
-
-**🥈 Line / 🥉 plain priority:**
-
-```text
-Apple Music → LRCLib → Unison → NetEase → KuGou → QQ Music → YouTube Music
-```
-
-`tracks` is sorted by tier, then the applicable provider order. `primary` is the first returned track. A word track from NetEase therefore outranks a line-only Apple Music track.
-
-The `/plain` endpoint uses the text-provider order regardless of the track's original sync tier. `/ttml` chooses an existing TTML payload; it does not fabricate TTML from word arrays. `/lrc` serializes selected normalized lines, so use `/lyrics` for native karaoke word data.
+For synchronized karaoke effects, use the `/lyrics` JSON response so your app can access native word timing. The `/lrc` endpoint is intended for line-synced lyric export, while `/ttml` returns an existing TTML representation when one is available.
 
 ## 📡 API reference
 
-All paths below are relative to the API base. Normal client access is `GET`; CORS preflight handling is separate.
+**Base URL:** `https://api.liriqo-alfarrizi.my.id/v1`
 
-| Endpoint | Output | Input / behavior |
+The following endpoints are intended for client integrations. All paths are relative to the base URL.
+
+| Endpoint | Response | Purpose |
 | --- | --- | --- |
-| `/lyrics` | JSON | Resolve metadata and return ranked provider tracks. See [lyrics inputs](#lyrics-inputs). |
-| `/lrc` | `text/plain` | Line-synced LRC export; requires `v` or `videoId`. |
-| `/plain` | JSON | `{ videoId, provider, syncLevel, tier, lyrics }`; requires `v` or `videoId`. |
-| `/ttml` | Raw TTML text | Requires `v` or `videoId`; returns `404` if no real TTML is available. The current Node server sends `text/plain`. |
-| `/search` | JSON | Metadata resolution without lyrics; use `v`, `Q`/`q`/`query`, or `isrc`. An ISRC result may have `videoId: null`. |
-| `/metadata`, `/resolve` | JSON | Aliases of `/search` in the current Node server. |
-| `/stats` | JSON | Request metrics, selected-provider summaries, masked public IP lists and ban feed. |
-| `/health` | JSON | Status, version and uptime. `upstream=1` requires administrator access. |
-| `/` | JSON or HTML | Endpoint documentation, depending on the requested content type. |
+| `GET /lyrics` | JSON | Find lyrics and return the selected track plus other available candidates. |
+| `GET /lrc` | Text | Export line-synced LRC using `v` or `videoId`. |
+| `GET /plain` | JSON | Return plain lyric text using `v` or `videoId`. |
+| `GET /ttml` | Text | Return an available TTML lyric document using `v` or `videoId`; `404` if unavailable. |
+| `GET /search` | JSON | Find song metadata using a video ID, query, or ISRC. |
+| `GET /metadata` / `GET /resolve` | JSON | Alternative metadata lookup routes. |
 
 ### 🎶 Lyrics inputs
 
-These parameters apply to **`/lyrics`**, not uniformly to every endpoint.
+These parameters apply to **`/lyrics`**; other endpoints can accept a smaller subset.
 
 | Parameter | Example | Purpose |
 | --- | --- | --- |
-| `v` / `videoId` | `HaEYUJ2aRHs` | YouTube video ID; metadata is inferred when missing. |
-| `Q` / `q` / `query` | `Dynamite BTS` | Search for the song and resolve metadata. |
+| `v` / `videoId` | `HaEYUJ2aRHs` | YouTube video ID; song information can be resolved automatically. |
+| `Q` / `q` / `query` | `Dynamite BTS` | Search by song name and artist together. |
 | `title` + `artist` | `Dynamite` + `BTS` | Explicit song metadata. |
-| `duration` | `199` | Song duration in **seconds**; helps matching. |
-| `album` | `BE` | Optional matching metadata. |
-| `isrc` | `QM7282022872` | Resolve recording metadata and assist provider matching. |
-| `url` / `link` | A YouTube or Spotify track URL | URL resolution supported by the current server; Spotify metadata can depend on server configuration. |
+| `duration` | `199` | Track duration in **seconds** to help find a matching recording. |
+| `album` | `BE` | Optional album information. |
+| `isrc` | `QM7282022872` | Recording identifier for additional matching. |
+| `url` / `link` | YouTube or Spotify track URL | Supported music link resolution; coverage varies. |
 
 ```sh
 curl --get "https://api.liriqo-alfarrizi.my.id/v1/lyrics" --data-urlencode "isrc=QM7282022872"
@@ -203,34 +184,24 @@ curl --get "https://api.liriqo-alfarrizi.my.id/v1/lyrics" --data-urlencode "url=
 curl --get "https://api.liriqo-alfarrizi.my.id/v1/search" --data-urlencode "Q=Dynamite BTS"
 ```
 
-Do not assume arbitrary music URLs, Apple Music links, Tidal, song.link or generic web pages are supported by this runtime. `/search` also does not currently implement the same URL-resolution path as `/lyrics`; use its query/video/ISRC inputs. For title-and-artist search, put both in `Q` rather than relying on separate `/search` fields.
-
-### ⚙️ Modes and diagnostics
-
-- `full=1` and `fast=1` are accepted compatibility parameters. The current Node lyrics service waits for all scheduled provider tasks to settle under their timeouts/deadlines in either mode. They do **not** enable tier-progressive early completion in this implementation.
-
-- `debug=1` exposes `_dbg` only to privileged administrators. Public responses strip it.
-
-- `health?upstream=1` is privileged; a public health check does not probe every provider.
-
-- A successful lookup can return fewer than eight tracks. `count` is the number actually returned, not the configured provider count.
+> [!TIP]
+> Not all music-service URLs are supported. For best compatibility, provide a YouTube video ID, an ISRC, or a song-and-artist query.
 
 ### 🚨 Errors and retries
 
-> [!IMPORTANT]
-> Check both HTTP status and the JSON `error` field. Some resolution failures are returned as JSON error envelopes even when the route responds with HTTP `200`.
+Check the HTTP status and, for JSON responses, the optional `error` field. Some lookup failures may be returned in an error object even when HTTP status is `200`.
 
-| Status / result | Client handling |
+| Status / result | Recommended client behavior |
 | --- | --- |
-| `400` | Fix missing or invalid input. Format endpoints require a video ID. |
-| `403` | Access denied, banned request or privileged operation. |
-| `404` | Requested output format is unavailable, or the route does not exist. |
-| `429` | Rate-limited; honor `Retry-After` when present. |
-| `503` | Capacity or temporary service failure; back off and honor `Retry-After` when present. |
-| `tracks: []`, `primary: null`, `count: 0` | No usable provider result for this lookup; not equivalent to a throttled request. |
+| `400` | Check for missing or invalid inputs. |
+| `403` | Request not permitted; do not repeat unchanged requests. |
+| `404` | Requested resource or lyric format is unavailable. |
+| `429` | Too many requests; respect `Retry-After` if supplied. |
+| `503` | Temporary service unavailability; retry later with backoff. |
+| `tracks: []`, `primary: null`, `count: 0` | No matching lyrics; try another query or show a graceful fallback. |
 
 > [!WARNING]
-> Avoid retry loops and parallel duplicate lookups. The client parser exposes `ApiError.status`, `ApiError.code` and `ApiError.retryAfter`; retries remain the caller's responsibility.
+> Avoid frequent polling or parallel duplicate requests. Use exponential backoff when retrying temporary errors.
 
 ## 📦 Response format
 
@@ -281,7 +252,7 @@ The `/lyrics` endpoint returns a ranked provider list and a selected `primary` t
 }
 ```
 
-The example abbreviates `primary`; actual responses include the full selected track there. Additional envelope fields such as `isVideoId`, `matchScore` and metadata cache markers may be present. `tookMs` measures lyrics-service work, not the complete client round trip.
+The example abbreviates `primary`; actual responses include the full selected track there. Additional optional response fields may be present. `tookMs` reports processing time and is not the complete client round-trip latency.
 
 ### ⏱️ Timing units
 
@@ -307,11 +278,11 @@ Keep native word ends and gaps intact. Do not multiply normalized timestamps by 
 | `timed[]` | Lines with `text`, `id`, `start`, `end` and optional embedded `words`. |
 | `words[]` | Optional top-level per-line word arrays, addressed by line ID. |
 | `agent`, `songPart`, `isCue`, `isInstrumental` | Optional normalized line annotations; not guaranteed for every provider. Background information retained in raw TTML becomes `parts[].isBackground` in the client parser. |
-| `ttml`, `lrc`, `qrc`, `krc` | Optional raw, decoded or generated representations. QRC/KRC decoding is performed server-side; LRC may be generated from normalized lines. |
+| `ttml`, `lrc`, `qrc`, `krc` | Optional raw, decoded or generated representations. Some representations may be generated from normalized lyric data. |
 | `nativeWordTiming`, `nativeRichsync` | Provider-specific evidence of native timing. |
 | `translation`, `romanization` | Optional supplementary text; availability and alignment vary. |
 
-Raw `yrc`/`richsync` are accepted by the client parser when provided, but the server may expose their content only as normalized `timed[].words`. Do not require raw fields for karaoke playback.
+Raw `yrc`/`richsync` are accepted by the client parser when provided, but a response may include only normalized `timed[].words`. Do not require raw fields for karaoke playback.
 
 ## 🧩 Lyrics parser
 
@@ -352,95 +323,61 @@ try {
 | `provider`, `syncedProvider`, `plainProvider` | Selected adapter for each result slot. |
 | `route` | Parsed representation: `ttml`, `qrc`, `yrc`, `richsync`, `words`, `timed`, `lrc` or `plain`. |
 
-The parser tries usable TTML, decrypted QRC, YRC/richsync, normalized timing and LRC representations, with fallback inside the same track if a raw representation fails. It verifies actual word parts rather than trusting a tier label and applies duration-fit checks to timed candidates.
+The parser supports TTML, QRC, YRC, richsync, normalized word timing, LRC, and plain text. It checks for usable timing information and selects an appropriate representation for playback.
 
-Pass numeric seconds to the parser's `duration` option when search metadata contains a formatted duration string. Native timing is preserved; the main parser no longer rebuilds KuGou/NetEase words through proportional LRC distribution. Legacy `lrclib_wordsync` tracks are ignored. TTML background vocals, singer agents and songwriters are retained where available. Instrumental gap markers use a configurable threshold, normally 5000 ms. Text translations attach only when line counts match; romanization is not automatically aligned.
+Pass numeric seconds to the parser's `duration` option. The parser preserves native word boundaries and supports annotations such as background vocals and singer agents when the source provides them. Translation and romanization coverage depends on each provider.
 
-**Requirements:** Node.js 20.3+ or a compatible browser bundler. This is a private local package, not an npm-published zero-dependency SDK. It uses locally vendored parser dependencies; retain the required `lyrics-parser/node_modules` content when copying it. See the parser README for dependency and license caveats.
+**Requirements:** Node.js 20.3+ or a compatible browser bundler. See the [parser documentation](lyrics-parser/README.md) for setup, dependencies, and examples.
 
-## 🔄 Resolution pipeline
+## 🔄 How LiriQo works
+
+LiriQo gives different lyric sources a consistent shape that applications can render without implementing a separate parser for every service.
 
 ```mermaid
-flowchart TD
-    A["🌐 API request"] --> B["🛡️ Validation, quotas & abuse protection"]
-    B --> C["🔎 Resolve metadata: ID / query / ISRC / URL"]
-    C --> D["⏱️ Look up duration if needed"]
-    D --> E["🎼 Schedule 8 provider adapters with deadlines"]
-    E --> F["⏳ Wait for results, failures or timeouts"]
-    F --> G["🧩 Normalize tracks & verify native word timing"]
-    G --> H["🏆 Sort by sync tier & provider priority"]
-    H --> I["📦 tracks · primary · tier · count · tookMs"]
+flowchart LR
+    A["🎵 Song information"] --> B["🔎 Find matching lyrics"]
+    B --> C["🎼 Available providers"]
+    C --> D["🧩 Normalize formats"]
+    D --> E["🏆 Select best available sync"]
+    E --> F["📦 Lyrics API response"]
 ```
 
-**Adapters:** Apple Music · Musixmatch · Unison · NetEase · KuGou · QQ Music · LRCLib · YouTube Music.
+Whether you're building a music player, browser extension, or companion lyrics display, the same response model supports karaoke timing, line highlighting, and unsynchronized text.
 
-- **NetEase:** search and match a recording, try native YRC, then fall back to LRC/plain text. YRC words retain their absolute millisecond boundaries.
+## 💡 Usage guidelines
 
-- **KuGou:** decode KRC on the server and expose native word timing through the common track schema.
+- 🎯 **Prefer precise song metadata:** Include the song title and artist, and provide the duration or ISRC when available.
+- 🕒 **Respect timestamps:** Normalized line and word times are in milliseconds; request duration is in seconds.
+- 🎤 **Check the sync level:** Enable karaoke word highlighting only when native word data exists. Line-only or plain text needs a different display style.
+- 🔁 **Handle unavailable results:** A missing lyric is different from an HTTP error; offer an alternate search or a plain-text fallback.
+- ⏳ **Retry responsibly:** Honor `Retry-After` and use backoff for temporary errors instead of rapid repeat requests.
+- 📝 **Keep attribution:** Display available source and provider information in your app when applicable.
 
-- **QQ Music:** decrypt QRC on the server, parse word timing, and retain translation/romanization when available.
+> [!NOTE]
+> Public access is designed for reasonable application use. Availability and usage limits may change over time.
 
-- **Musixmatch:** use the dedicated native-richsync adapter. This is distinct from `ytm_line` carrying `lyricsSource: "Musixmatch"`.
+## 🔗 Project links
 
-- **YouTube Music:** try InnerTube client variants for timed lyrics, then plain text. Preserve source metadata instead of inferring a licensor from the text.
-
-## 🛡️ Caching, security and statistics
-
-### ⚡ Caching
-
-The Node server has a bounded in-memory response cache and coalesces identical in-flight work. Positive responses normally receive an internal five-minute TTL; other entries can have shorter TTLs. Metadata caching is separate.
-
-For `/lyrics`, public five-minute cache headers are emitted only when a non-error response contains a primary track and at least three tracks, and the response is not privileged debug output. Other lyric responses use `private, no-store`. This is a **track-count gate**, not proof that every provider succeeded or that three unique providers responded. Internal caching and public cache headers are separate policies; actual edge caching depends on deployment configuration.
-
-### 🔐 Request protection
-
-The current server implements per-IP quotas, a separate cache-miss budget, bounded work queues, provider concurrency/deadlines and WAF/ban controls. Public IP addresses are masked in stats and ban lists. Trusted proxy handling and administrator access depend on server configuration.
-
-An optional `/captcha` token endpoint exists, but its short-lived IP-bound token is **not proof of humanity** and does not grant additional request quota. Public API-key-free access does not bypass request protection.
-
-### 📊 Statistics
-
-`/stats` includes request totals, success/failure counts, latency summaries, `errorCounts`, `blockedCount`, `ips`, `recentLog`, `banned` and `bannedTodayWaf`. Ban entries can include a referenceable ID, reason and expiry.
-
-Provider summaries are based on the **selected primary provider and overall request latency**, including cache-served requests. They are not independent measurements of every upstream attempt, availability or network latency. Privileged runtime diagnostics are not exposed to normal public clients.
-
-## 🗂️ Repository and validation
-
-| Path | Purpose |
+| Resource | Link |
 | --- | --- |
-| `termux-server/server.mjs` | Current Node/Termux HTTP server. |
-| `termux-server/src/services/LyricsService.js` | Current eight-provider normalization and ranking. |
-| `termux-server/src/providers/` | Provider adapters, including NetEase YRC and Musixmatch richsync. |
-| `termux-server/tests/` | Server provider, priority, attribution and hardening tests. |
-| `lyrics-parser/` | Client parser, offline fixtures and integration documentation. |
-| `src/`, `wrangler.toml` | Older Cloudflare Worker implementation; not equivalent to the current Node runtime. |
-| `public/` | Web frontend assets. |
+| 🌐 **API** | [LiriQo v1](https://api.liriqo-alfarrizi.my.id/v1) |
+| 🧪 **Live demo** | [Try LiriQo](https://api-liriqo.web.app/) |
+| 🧩 **Client parser** | [Parser documentation](lyrics-parser/README.md) |
+| 📢 **Releases** | [GitHub Releases](https://github.com/AlFarrizi-Studio/LiriQo/releases) |
+| 🐛 **Issues & feedback** | [GitHub Issues](https://github.com/AlFarrizi-Studio/LiriQo/issues) |
 
-From `lyrics-parser/`:
-
-```sh
-npm test
-npm run check
-```
-
-From `termux-server/`, run the focused offline provider/selection tests:
-
-```sh
-node --test tests/lyrics-priority.test.mjs tests/word-providers.test.mjs tests/ytm-attribution.test.mjs
-```
-
-The parser's separate `npm run demo` makes live API requests and is not part of the offline test suite. No standalone lint or TypeScript typecheck script is configured in these package manifests.
+Contributions, bug reports, and integration feedback are welcome via GitHub Issues.
 
 ## 🙌 Credits
 
 | Project | Contribution |
 | --- | --- |
-| [LDDC](https://github.com/chenmozhijin/LDDC) | QRC/KRC decoding techniques. |
-| [qrc-decoder](https://github.com/apoint123/qrc-decoder) | QRC cryptography reference. |
+| [LDDC](https://github.com/chenmozhijin/LDDC) | Lyrics format compatibility reference. |
+| [qrc-decoder](https://github.com/apoint123/qrc-decoder) | QRC format research reference. |
 | [LRCLib](https://lrclib.net) | Open synced/plain lyrics database. |
 | [Unison](https://unison.boidu.dev) | Community lyric database. |
-| [Better Lyrics / @braccato](https://github.com/better-lyrics) | Client-side lyric parsing foundations. |
-| [fast-xml-parser](https://github.com/NaturalIntelligence/fast-xml-parser) | XML parsing used by the vendored parser stack. |
+| [Better Lyrics / @braccato](https://github.com/better-lyrics) | Lyrics parser inspiration and research. |
+| [fast-xml-parser](https://github.com/NaturalIntelligence/fast-xml-parser) | XML parsing library. |
 
 ## 📄 License
 
