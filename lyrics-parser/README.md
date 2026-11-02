@@ -1,150 +1,190 @@
-# LiriQo Lyrics Parser
+# LiriQo Lyrics Parser 1.1.0
 
-Official client-side lyrics parser for the **LiriQo API** — supports all 7 providers
-and produces Better-Lyrics-compatible lyric objects: syllable/word sync,
-**background vocals**, **singer agents (duets v1/v2/group)**, **instrumental
-lines**, **songwriters**, and **per-line translations**.
+Client-side adapter for the current LiriQo API (`v1.5.1`). It converts provider payloads into Better-Lyrics-compatible objects. **This package is not the provider backend**: it does not retrieve Musixmatch tokens, decrypt encrypted QRC/KRC blobs, or fetch provider endpoints directly.
 
-This folder is ready to be dropped into the LiriQo repo root (sits next to
-`public/`, `README.md`, and the root `LICENSE` — the root MIT license covers it).
+## Requirements
 
-> Not the worker code — this is a client-side parsing library (Node.js >= 16 /
-> browser bundlers). All third-party dependencies are vendored under
-> `node_modules/`, so it runs **offline with no `npm install`**.
+- Node.js **20.3+**, or a browser bundler with `fetch`, `AbortController` and compatible dependencies.
+- Existing dependencies in this folder's `node_modules` are locally vendored. Keep that directory when copying the folder. It is not a self-contained npm-published package; `package.json` is intentionally private. A fresh checkout without those dependencies needs the same compatible parser dependencies supplied before use.
+- Parsing an existing payload is offline. `getLiriQoLyrics`, `fetchLiriQoLyrics`, `searchLiriQoVideoId`, and the live demo require network access.
 
-## Supported providers
+## Choose the operation
 
-| Provider | Source data | Parsing route | Features |
-|---|---|---|---|
-| Apple Music (`apple_music_liriqo`) | raw TTML | `@braccato/parsers` (TTML) | per-syllable parts, background vocals (`isBackground`), agents (`v1`/`v2`), instrumentals, songwriters, TTML translations/romanizations |
-| Unison (`unison_community`) | raw TTML | `@braccato/parsers` (TTML) | intact word text, agents, instrumentals |
-| QQ Music (`qq_portato`) | raw QRC | built-in QRC parser (singer detection) | per-syllable, **duet agents** (`v1`/`v2`, group → `v1000`), instrumentals, songwriters, translations |
-| KuGou (`kugou_legato`) | `timed[].words` | word markup builder | per-syllable word sync |
-| LRCLib (`lrclib`) | line LRC | `@braccato/parsers` (LRC) | line sync |
-| NetEase (`netease`) | line LRC | `@braccato/parsers` (LRC) | line sync + **per-line translations** |
-| YTM (`ytm_line`) | line LRC / plain | `@braccato/parsers` (LRC) / plain parser | line sync / unsynced |
+| Need | Function | Network? |
+|---|---|---|
+| Fetch a video and parse its lyrics | `getLiriQoLyrics(videoId, options)` | LiriQo API only |
+| Fetch the original API JSON | `fetchLiriQoLyrics(videoId, options)` | LiriQo API only |
+| Parse saved/already-fetched JSON | `parseLiriQoResponse(payload, options)` | No |
+| Parse raw native NetEase YRC | `parseYrc(yrc)` | No |
+| Parse raw Musixmatch richsync JSON/array | `parseMusixmatchRichsync(richsync)` | No |
+| Convert normalized `timed[]` and native words | `normalizedTrackToLyrics(track, options)` | No |
+| Read actual provider attribution | `getTrackAttribution(track)` | No |
 
-Provider order **follows the server's quality order** (the `tracks` array), with
-a fallback chain for the `richsynced` slot: `TTML → QRC → word builder`; the
-`synced` slot comes from tier `Cipali` and the `plain` slot from tier `Bocimi`.
+## 1. Fetch and parse
 
-## Usage
+From the parent folder, save an ESM script:
 
 ```js
-import { getLiriQoLyrics } from "./lyrics-parser/src/index.js";
+import { getLiriQoLyrics, ApiError } from './lyrics-parser/src/index.js';
 
-const result = await getLiriQoLyrics("HaEYUJ2aRHs", {
-  duration: 200,          // song duration in SECONDS (recommended)
-  song: "Dynamite",       // title hint (improves QRC singer filtering)
-  artist: "BTS",          // artist hint
-  // baseUrl: "https://api.liriqo-alfarrizi.my.id/v1",
-  // signal: abortSignal, timeout: 15000, instrumentalGapMs: 5000
-});
+try {
+  const result = await getLiriQoLyrics('HaEYUJ2aRHs', {
+    duration: 199,
+    song: 'Dynamite',
+    artist: 'BTS',
+    timeout: 30000,
+    instrumentalGapMs: 5000,
+  });
 
-if (result.richsynced) {
-  console.log("Source:", result.provider);            // apple_music_liriqo, etc.
-  for (const line of result.richsynced.lyrics) {
-    console.log(line.startTimeMs, line.words);
-    if (line.agent) console.log("  singer:", line.agent);          // v1 / v2 / v1000
-    for (const part of line.parts ?? []) {
-      if (part.isBackground) console.log("  [background]", part.words);
+  const chosen = result.richsynced ?? result.synced ?? result.plain;
+  if (!chosen) {
+    console.log('No usable lyrics');
+  } else {
+    console.log(chosen.provider, chosen.source, chosen.lyricsSource);
+    for (const line of chosen.lyrics) {
+      console.log(line.startTimeMs, line.words);
+      for (const part of line.parts ?? []) {
+        console.log(part.startTimeMs, part.durationMs, part.words);
+      }
     }
+  }
+} catch (error) {
+  if (error instanceof ApiError && [429, 503].includes(error.status)) {
+    console.log('Retry later:', error.retryAfter, 'seconds');
+  } else {
+    throw error;
   }
 }
 ```
 
-Live demo (requires connection to the API):
+`duration` is **seconds**. Returned line/word timestamps and durations are **milliseconds**. Do not multiply the returned values by 1000. `instrumentalGapMs: 0` disables generated gap markers on the normalized timing route.
 
-```
-node lyrics-parser/test/demo.mjs
-```
+The client does not automatically retry throttled requests or fetch challenge tokens. It exposes `ApiError.status`, `ApiError.retryAfter` (seconds or null), and `ApiError.code` so the calling application controls retries. A `429` is not missing lyrics.
 
-## Result shape
+## 2. Parse an existing response without fetching
 
 ```js
-{
-  richsynced: { lyrics: [...], source, sourceHref, cacheAllowed, language, songwriters, provider } | null,
-  synced:     { ... } | null,
-  plain:      { ... } | null,
-  provider:      "apple_music_liriqo" | ...,   // winner of the richsynced slot
-  syncedProvider: "netease" | ...,             // winner of the synced slot
-  plainProvider:  "..." | null,                // winner of the plain slot
-  route:         "ttml" | "qrc" | "words" | "lrc" | "plain" | null
-}
+import { parseLiriQoResponse } from './lyrics-parser/src/index.js';
+
+const payload = {
+  metadata: { duration: 120 },
+  tracks: [{
+    provider: 'netease',
+    syncLevel: 'word',
+    tier: 'Jagorawi',
+    upstreamProvider: 'NetEase Cloud Music',
+    timed: [{
+      id: 0,
+      text: 'Hello world',
+      start: 1234,
+      end: 3456,
+      words: [
+        { text: 'Hello ', start: 1234, end: 1765 },
+        { text: 'world', start: 1900, end: 3456 },
+      ],
+    }],
+  }],
+};
+
+const result = parseLiriQoResponse(payload, { instrumentalGapMs: 0 });
+console.log(result.richsynced.lyrics[0]);
 ```
 
-Each lyric line (`lyrics[i]`):
+Native word ends and gaps remain intact. For example, `1234..1765` becomes `startTimeMs: 1234, durationMs: 531`; it is not converted through centisecond LRC or stretched proportionally.
+
+## 3. Parse raw provider formats
 
 ```js
-{
-  startTimeMs: 200,          // line start (ms)
-  words: "'Cause, ah-ah...", // line text
-  durationMs: 2968,
-  parts: [                   // karaoke units (per word/syllable)
-    { startTimeMs: 200, words: "'Cause,", durationMs: 344 },
-    { startTimeMs: 544, words: " ",  durationMs: 0 },              // explicit space
-    { startTimeMs: 544, words: "ah-", durationMs: 470, isBackground: true } // background vocal
-  ],
-  agent: "v1",               // singer (duet): v1 / v2, group: v1000
-  isInstrumental: false,     // instrumental line (gap > instrumentalGapMs)
-  translation: { text: "...", lang: "zh" },   // translation (QQ/NetEase)
-  translations: { zh: "..." }
-}
+import {
+  parseYrc,
+  parseMusixmatchRichsync,
+  normalizedTrackToLyrics,
+} from './lyrics-parser/src/index.js';
+
+const yrcLines = parseYrc(
+  '[1000,2000](1000,800,0)Hello (1800,1200,0)world',
+);
+const richsyncLines = parseMusixmatchRichsync([
+  { ts: 1, te: 3, x: 'Hello world', l: [
+    { o: 0, c: 'Hello ' },
+    { o: 0.8, c: 'world' },
+  ] },
+]);
+
+const parsed = normalizedTrackToLyrics({
+  provider: 'musixmatch',
+  timed: richsyncLines,
+}, { instrumentalGapMs: 0 });
+console.log(parsed.isWordSynced, parsed.lyrics);
 ```
 
-## Individual functions
+- YRC line and word timestamps are native **absolute milliseconds**.
+- Musixmatch `ts`/`te` and word offsets `o` are **seconds** in the input; offsets are relative to the line start. They are converted once to absolute milliseconds.
+- Raw malformed inputs return an empty array; invalid word offsets may preserve valid line text without inventing words.
+- QRC input must already be decrypted. KRC input must already be decoded/normalized; encrypted blobs are not handled by this client parser.
 
-| Function | File | Purpose |
+## Provider support and selection
+
+| Provider | Accepted payloads | Notes |
 |---|---|---|
-| `getLiriQoLyrics(videoId, options)` | `src/index.js` | full orchestrator |
-| `fetchLiriQoLyrics(videoId, options)` | `src/api.js` | `/lyrics` client (in-flight dedup, timeout) |
-| `searchLiriQoVideoId(query, options)` | `src/api.js` | resolve `/search` → videoId |
-| `parseTTML(ttml, options)` | `src/ttml.js` | TTML → lyrics (agents, background vocals, instrumentals, songwriters) |
-| `parseQrc(qrc, durationMs, meta)` | `src/qrc.js` | QRC → lyrics (singer agents, parts, songwriters) |
-| `extractSongwriters(qrc)` | `src/qrc.js` | songwriters from QRC metadata |
-| `buildWordSyncedLRC(track, anchor, durationMs, {wantWords})` | `src/words.js` | build enhanced-LRC from word data (embedded/granular + anchor re-distribution) |
-| `parseLrcLyrics(lrc, durationMs, options)` | `src/lrc.js` | LRC → lyrics (A2 word tags, `[bg:]`, `[offset:]`, instrumentals) |
-| `parsePlain(plain)` / `stripLrcTimestamps(lrc)` | `src/lrc.js` | unsynced |
-| `attachTranslations(lines, translation, lang)` | `src/translations.js` | attach per-line translations (1:1) |
-| `pickTrack(tracks, tier, options)` | `src/select.js` | best track per tier (`Jagorawi`/`Cipali`/`Bocimi`) |
-| `pickAnchorTrack(tracks, wordTrack, durationMs)` | `src/select.js` | line track used as the word-sync window authority |
-| `hasWordData` / `isRealTrack` / `fitsDuration` / `isGranularWordTiming` | `src/select.js` | track validators |
-| `insertInstrumentalLines(lines, durationMs, gapMs)` | `src/util.js` | insert instrumental lines for gaps > gapMs |
-| `formatLrcTime` / `wordSeparator` / `stringSimilarity` / `createResult` | `src/util.js` | utilities |
+| Apple Music | TTML, native normalized words/lines, LRC, plain | TTML background vocals, singer agents and metadata retained where supplied |
+| Musixmatch | Native richsync or normalized words | Actual word boundaries, not proportional timing |
+| Unison | TTML, normalized timing, LRC/plain | Native fields retained |
+| NetEase | **YRC**, normalized words, LRC, plain | Word-sync and translations |
+| KuGou | Normalized KRC words/lines, plain | No encrypted KRC decoder in this package |
+| QQ Music | Decrypted QRC, normalized words/lines, plain | QRC singer/metadata support |
+| LRCLib | Line timing/LRC and plain | No invented word timing; legacy `lrclib_wordsync` tracks are ignored |
+| YTM | Normalized line/plain timing, LRC/plain | Preserves `lyricsSource` and `upstreamProvider` evidence |
 
-### Word-sync note (KuGou/LRCLib)
+High-quality candidates are ordered **Apple Music → Musixmatch → Unison → NetEase → KuGou → QQ Music**. Line/plain slots use **Apple Music → LRCLib → Unison → NetEase → KuGou → QQ Music → YTM**. Unknown providers follow known ones; no missing provider is fabricated.
 
-Word timing from some providers is distributed inside a rigid time window
-(`start + 5000ms`) that can overflow into the next line. This parser rebuilds
-the timing using the **true line windows** from a line-synced track
-(`pickAnchorTrack`) and distributes the words proportionally inside them, so
-line starts are always accurate.
+Each track tries its usable representations: TTML, decrypted QRC, raw YRC/richsync, normalized native timing, then LRC. A failed raw representation no longer prevents that same track's normalized fallback. The `richsynced` slot requires actual word parts, rather than trusting a `Jagorawi` label. Duration mismatch checks also apply to rich candidates.
 
-## Structure
-
-```
-lyrics-parser/
-├── src/
-│   ├── index.js         # orchestrator (getLiriQoLyrics)
-│   ├── api.js           # API client + in-flight dedup
-│   ├── select.js        # track selection & validation
-│   ├── ttml.js          # Apple Music / Unison route (TTML)
-│   ├── qrc.js           # QQ Music route (QRC + singer agents)
-│   ├── words.js         # word-sync builder (embedded/granular + anchor)
-│   ├── lrc.js           # line-sync / plain route
-│   ├── translations.js  # per-line translations
-│   └── util.js          # shared utilities
-├── node_modules/        # vendored dependencies (offline)
-├── test/demo.mjs        # live demo
-└── package.json
-```
+A `synced` slot can be derived from the chosen provider's line windows even when its richsync exists. A `plain` slot can use `plain`, stripped LRC, or timed-line text. Empty input yields stable null slots, not an exception.
 
 ## Attribution
 
-Vendored dependencies under `node_modules/` (their own MIT/Apache-2.0 licenses apply):
+Every non-null slot includes `provider`, `upstreamProvider`, `lyricsSource`, and `source`, in addition to the existing result fields. For `ytm_line`, attribution such as `YouTube Music (LyricFind)` or `YouTube Music (Musixmatch)` is based only on `lyricsSource`/`upstreamProvider` metadata in the API response. Missing evidence stays `YouTube Music`; the parser does not guess a licensor from the lyric text.
 
-- [`@braccato/parsers`](https://github.com/better-lyrics) — TTML/LRC/QRC/SRT/plain parsers
-- [`fast-xml-parser`](https://github.com/NaturalIntelligence/fast-xml-parser) + sub-dependencies
-  (`xml-naming`, `path-expression-matcher`, `@nodable/entities`, `is-unsafe`, `strnum`, `anynum`)
+## Result contract
 
-Overall license: **MIT** (see the [`LICENSE`](../LICENSE) at the repo root).
+```js
+{
+  richsynced: null,
+  synced: null,
+  plain: null,
+  provider: null,
+  syncedProvider: null,
+  plainProvider: null,
+  route: null,
+}
+```
+
+A populated slot contains `{ lyrics, source, sourceHref, cacheAllowed, language, songwriters, provider, upstreamProvider, lyricsSource, musicVideoSynced }`. `route` identifies the best parsed representation: `ttml`, `qrc`, `yrc`, `richsync`, `words`, `timed`, `lrc`, or `plain`.
+
+Each line contains `startTimeMs`, `durationMs`, and `words` (line text). Word/syllable units are in `parts[]`; native `agent`, `isBackground`, `songPart`, cue/instrumental and explicit flags are preserved when provided. Plain lines have zero timing. Translation attachment remains line-count based; unmatched translations are not arbitrarily aligned. `romanization` remains available in the raw API payload and is not automatically positioned by this wrapper.
+
+## Client cancellation and coalescing
+
+Identical fetches share an upstream request using base URL, video ID, timeout and output-affecting metadata. One caller's cancellation does not cancel other consumers; if all consumers leave, upstream is aborted. Distinct in-flight requests and response-body size are bounded. Invalid URLs, timeout values and malformed responses produce sanitized `ApiError`s.
+
+## Tests
+
+Run **inside this folder**:
+
+```sh
+npm test
+npm run check
+```
+
+Tests use mocked fetch and documentation fixtures, not live API/provider traffic. There is no configured lint or TypeScript typecheck command. The separate live demo is explicitly opt-in:
+
+```sh
+npm run demo
+```
+
+## Compatibility and dependencies
+
+Existing named exports such as `parseTTML`, `parseQrc`, `parseLrcLyrics`, `buildWordSyncedLRC`, `pickTrack`, and `getLiriQoLyrics` remain. Legacy word-building/anchor helpers are still exported for callers that explicitly need them, but the main response parser no longer redistributes native word timing through them.
+
+Vendored third-party dependencies retain their own license terms. This update does not relicense those dependencies or imply that package metadata alone licenses every bundled artifact. This is a local source update; it was not published to npm or pushed to GitHub.

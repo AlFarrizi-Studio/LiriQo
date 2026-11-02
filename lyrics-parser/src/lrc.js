@@ -31,6 +31,7 @@ export function parsePlain(plain) {
 export function stripLrcTimestamps(lrcText) {
   return lrcText
     .replace(/\[[^\]]*\]/g, "")
+    .replace(/<\d+:\d{2}(?:[.:]\d+)?>/g, "")
     .split("\n")
     .map((x) => x.trim())
     .filter(Boolean)

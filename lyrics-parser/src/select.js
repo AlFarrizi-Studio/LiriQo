@@ -58,9 +58,8 @@ export function hasWordData(track) {
  * album/video versions).
  */
 export function fitsDuration(track, durationMs) {
-  if (!Array.isArray(track.timed) || track.timed.length === 0) return true;
-  const last = track.timed[track.timed.length - 1];
-  return !(Number(last && last.start) > durationMs + 10000);
+  if (!Number.isFinite(durationMs) || durationMs <= 0 || !Array.isArray(track.timed)) return true;
+  return track.timed.every(line => !Number.isFinite(line?.start) || line.start <= durationMs + 10000);
 }
 
 /**
@@ -70,18 +69,17 @@ export function fitsDuration(track, durationMs) {
  * @param {"Jagorawi"|"Cipali"|"Bocimi"} tier
  */
 export function isRealTrack(track, tier) {
+  if (!track || typeof track !== 'object') return false;
   const timed = Array.isArray(track.timed) ? track.timed : [];
-  const plainLines =
-    typeof track.plain === "string" && track.plain.trim().length > 0
-      ? track.plain.trim().split("\n")
-      : null;
-  if (tier === "Bocimi") {
-    if (plainLines) return plainLines.length > 1;
-    if (timed.length > 0) return timed.length > 1;
-    return typeof track.lrc === "string" && track.lrc.length > 0 && track.lrc.split("\n").filter((x) => x.trim()).length > 1;
+  if (tier === 'Bocimi') {
+    return typeof track.plain === 'string' && !!track.plain.trim() ||
+      timed.some(line => typeof line?.text === 'string' && !!line.text.trim()) ||
+      typeof track.lrc === 'string' && !!track.lrc.trim();
   }
-  if (timed.length > 0) return timed.length > 1 && timed.some((x) => Number(x && x.start) > 0);
-  return typeof track.lrc === "string" && track.lrc.length > 0 && track.lrc.split("\n").filter((x) => x.trim()).length > 1;
+  if (timed.some(line => typeof line?.text === 'string' && !!line.text.trim() &&
+      Number.isFinite(line.start) && line.start >= 0 && Number.isFinite(line.end) && line.end > line.start)) return true;
+  return ['ttml', 'qrc', 'yrc', 'lrc'].some(key => typeof track[key] === 'string' && !!track[key].trim()) ||
+    Array.isArray(track.richsync) && track.richsync.length > 0 || typeof track.richsync === 'string' && !!track.richsync.trim();
 }
 
 /**

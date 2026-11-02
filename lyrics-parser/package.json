@@ -1,12 +1,13 @@
 ﻿{
   "name": "liriqo-lyrics-parser",
-  "version": "1.0.0",
-  "description": "Standalone lyrics parser for the LiriQo API - word/syllable sync, background vocals, singer agents, songwriters, translations and instrumentals for all 7 LiriQo providers.",
+  "version": "1.1.0",
+  "description": "LiriQo provider-aware parser: native TTML, QRC, NetEase YRC, Musixmatch richsync and normalized timing with attribution.",
   "type": "module",
   "main": "src/index.js",
   "exports": { ".": "./src/index.js" },
-  "scripts": { "demo": "node test/demo.mjs" },
+  "scripts": { "demo": "node test/demo.mjs", "test": "node --test test/*.test.mjs", "check": "node --check src/index.js && node --check src/provider-formats.js && node --check src/api.js" },
   "keywords": ["liriqo", "lyrics", "lrc", "ttml", "qrc", "karaoke", "word-sync", "apple-music", "qq-music", "kugou", "netease", "lrclib"],
-  "engines": { "node": ">=16" },
+  "engines": { "node": ">=20.3" },
+  "private": true,
   "license": "MIT"
 }

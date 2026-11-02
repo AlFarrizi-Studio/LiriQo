@@ -24,6 +24,7 @@ for (const song of SONGS) {
       artist: song.artist,
     });
     console.log(`  route=${result.route} provider=${result.provider ?? "-"} | syncedProvider=${result.syncedProvider ?? "-"} | plainProvider=${result.plainProvider ?? "-"}`);
+    console.log(`  attribution=${result.richsynced?.source ?? result.synced?.source ?? result.plain?.source ?? "-"}`);
     for (const slot of ["richsynced", "synced", "plain"]) {
       const r = result[slot];
       if (!r) {
