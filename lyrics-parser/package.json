@@ -1,13 +1,1 @@
-﻿{
-  "name": "liriqo-lyrics-parser",
-  "version": "1.1.0",
-  "description": "LiriQo provider-aware parser: native TTML, QRC, NetEase YRC, Musixmatch richsync and normalized timing with attribution.",
-  "type": "module",
-  "main": "src/index.js",
-  "exports": { ".": "./src/index.js" },
-  "scripts": { "demo": "node test/demo.mjs", "test": "node --test test/*.test.mjs", "check": "node --check src/index.js && node --check src/provider-formats.js && node --check src/api.js" },
-  "keywords": ["liriqo", "lyrics", "lrc", "ttml", "qrc", "karaoke", "word-sync", "apple-music", "qq-music", "kugou", "netease", "lrclib"],
-  "engines": { "node": ">=20.3" },
-  "private": true,
-  "license": "MIT"
-}
+{"name": "liriqo-lyrics-parser", "version": "1.2.0", "description": "LiriQo provider-aware parser: native TTML, QRC, NetEase YRC, KuGou KRC, Kuwo LRCX, Migu MRC, PetitLyrics WSY, Musixmatch richsync and normalized timing with attribution.", "type": "module", "main": "src/index.js", "exports": {".": "./src/index.js"}, "scripts": {"demo": "node test/demo.mjs", "test": "node --test test/*.test.mjs", "examples": "node examples/native-word.mjs && node examples/native-character.mjs && node examples/normalized-response.mjs", "check": "node --check src/index.js && node --check src/provider-formats.js && node --check src/api.js && node --check src/registry.js && node --check src/kuwo.js && node --check src/migu.js && node --check src/petitlyrics.js && node --check src/select.js && node --check src/util.js && node --check src/words.js && node --check src/lrc.js && node --check src/ttml.js && node --check src/qrc.js && node --check src/translations.js"}, "keywords": ["liriqo", "lyrics", "lrc", "ttml", "qrc", "krc", "lrcx", "mrc", "wsy", "karaoke", "word-sync", "character-sync", "apple-music", "qq-music", "kugou", "netease", "kuwo", "migu", "petitlyrics", "musixmatch", "lrclib"], "engines": {"node": ">=20.3"}, "private": true, "license": "MIT"}

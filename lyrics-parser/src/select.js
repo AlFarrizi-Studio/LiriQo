@@ -15,6 +15,7 @@
  */
 
 import { CJK_RE } from "./util.js";
+import { CANONICAL_TEXT_ORDER, canonicalProvider, providerRank } from "./registry.js";
 
 /**
  * Detect "granular" word data: the `timed` array holds ONE entry per word
@@ -83,21 +84,34 @@ export function isRealTrack(track, tier) {
 }
 
 /**
- * Pick the best track of a tier, honouring the server's quality order
- * (the `tracks` array order). When `requireWordData` is set the track must
- * carry word/syllable data. `allowMisfit` controls whether a track whose
- * timing does not fit the video duration may still be returned.
+ * Pick the best track of a tier, honouring evidence-based sync quality first
+ * (`syncLevel` syllable/word/character with real word data beats other word
+ * claims), then the canonical provider priority from the registry, then the
+ * server's response order as a stable tie-break. When `requireWordData` is
+ * set the track must carry word/syllable data. `allowMisfit` controls
+ * whether a track whose timing does not fit the video duration may still be
+ * returned.
  */
 export function pickTrack(tracks, tier, { requireWordData = false, durationMs = 0, allowMisfit = true } = {}) {
-  const candidates = tracks.filter(
-    (t) =>
-      !!t &&
-      t.tier === tier &&
-      isRealTrack(t, tier) &&
-      (!requireWordData || t.syncLevel === "syllable" || t.syncLevel === "word") &&
-      (!requireWordData || hasWordData(t)),
-  );
-  return candidates.find((t) => fitsDuration(t, durationMs)) ?? (allowMisfit ? (candidates[0] ?? null) : null);
+  const candidates = (tracks ?? [])
+    .map((track, index) => ({ track, index }))
+    .filter(({ track }) =>
+      !!track &&
+      track.tier === tier &&
+      isRealTrack(track, tier) &&
+      (!requireWordData || track.syncLevel === "syllable" || track.syncLevel === "word" || track.syncLevel === "character") &&
+      (!requireWordData || hasWordData(track)),
+    );
+  // Unknown providers never outrank known providers of equal claim strength;
+  // within the same claim strength, canonical priority and stable order apply.
+  const claimStrength = ({ track }) =>
+    (track.syncLevel === "syllable" || track.syncLevel === "word" || track.syncLevel === "character" ? 0 : 1);
+  candidates.sort((a, b) =>
+    claimStrength(a) - claimStrength(b) ||
+    providerRank(a.track.provider, CANONICAL_TEXT_ORDER) - providerRank(b.track.provider, CANONICAL_TEXT_ORDER) ||
+    a.index - b.index);
+  const fit = candidates.map((entry) => entry.track).find((track) => fitsDuration(track, durationMs));
+  return fit ?? (allowMisfit ? candidates.map((entry) => entry.track)[0] ?? null : null);
 }
 
 /**

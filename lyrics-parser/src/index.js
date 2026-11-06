@@ -5,6 +5,10 @@ import { parseLrcLyrics, parsePlain, stripLrcTimestamps } from "./lrc.js";
 import { attachTranslations } from "./translations.js";
 import { createResult, isNonEmptyString } from "./util.js";
 import { parseYrc, parseMusixmatchRichsync, normalizedTrackToLyrics, getTrackAttribution } from "./provider-formats.js";
+import { parseKuwoLrcx } from "./kuwo.js";
+import { parseMiguMrc } from "./migu.js";
+import { parsePetitLyricsWsy } from "./petitlyrics.js";
+import { CANONICAL_HIGH_ORDER, CANONICAL_TEXT_ORDER, canonicalProvider, providerRank } from "./registry.js";
 
 export { fetchLiriQoLyrics, searchLiriQoVideoId, ApiError } from "./api.js";
 export { parseTTML } from "./ttml.js";
@@ -15,19 +19,19 @@ export { attachTranslations, detectTranslationLanguage } from "./translations.js
 export { hasWordData, isGranularWordTiming, isRealTrack, fitsDuration, pickTrack, pickAnchorTrack } from "./select.js";
 export { formatLrcTime, wordSeparator, createResult, stringSimilarity, insertInstrumentalLines,
   LIRIQO_API_BASE, LIRIQO_HOMEPAGE, isNonEmptyString } from "./util.js";
-export { parseYrc, parseMusixmatchRichsync, normalizedTrackToLyrics, getTrackAttribution } from "./provider-formats.js";
+export { parseYrc, parseMusixmatchRichsync, normalizedTrackToLyrics, normalizeProviderTrack, getTrackAttribution, unitGranularity } from "./provider-formats.js";
+export { parseKuwoLrcx } from "./kuwo.js";
+export { parseMiguMrc, stripMiguMetaLines } from "./migu.js";
+export { parsePetitLyricsWsy, classifyPetitLyricsText } from "./petitlyrics.js";
+export { CANONICAL_HIGH_ORDER, CANONICAL_TEXT_ORDER, CANONICAL_PLAIN_ORDER, canonicalProvider, providerRank, PROVIDER_MIN_TIER, PROVIDER_ALIASES } from "./registry.js";
 
-const HIGH = ['apple_music_liriqo', 'musixmatch', 'unison_community', 'netease', 'kugou_legato', 'qq_portato'];
-const TEXT = ['apple_music_liriqo', 'lrclib', 'unison_community', 'netease', 'kugou_legato', 'qq_portato', 'ytm_line'];
-const alias = provider => provider === 'unison' ? 'unison_community' : provider;
-const rank = (track, order) => {
-  const index = order.indexOf(alias(track.provider));
-  return index < 0 ? 999 : index;
-};
+const HIGH = CANONICAL_HIGH_ORDER;
+const TEXT = CANONICAL_TEXT_ORDER;
 const attempt = fn => {
   try { return fn(); } catch { return null; }
 };
 
+/** Route table for already-normalized and raw payloads (order = preference). */
 function parseTrack(track, options) {
   let line = null;
   if (isNonEmptyString(track.ttml)) {
@@ -44,6 +48,10 @@ function parseTrack(track, options) {
   }
   const native = [
     ['yrc', () => parseYrc(track.yrc)],
+    ['krc', () => parseYrc(track.krc)],
+    ['lrcx', () => parseKuwoLrcx(track.lrcx)],
+    ['mrc', () => parseMiguMrc(track.mrc)],
+    ['wsy', () => parsePetitLyricsWsy(track.wsy ?? track.wsyXml)],
     ['richsync', () => parseMusixmatchRichsync(track.richsync ?? track.richsync_body)],
   ];
   for (const [route, fn] of native) {
@@ -81,32 +89,66 @@ function resultFor(track, parsed, cacheAllowed = true) {
   return result;
 }
 
+/**
+ * True when a parsed track carries GENUINE native granular (word/syllable/
+ * character) timing: at least one sung line with validated parts, none of
+ * which are phrase-only. Mere presence of `words[]` never satisfies this.
+ */
+function hasNativeGranular(parsed) {
+  return !!parsed?.isWordSynced && parsed.lyrics.some(line =>
+    !line.isCue && !line.isInstrumental &&
+    line.parts?.length && line.granularity !== 'phrase' &&
+    line.parts.some(part => part.words.trim() && part.durationMs > 0));
+}
+
+/** Response tracks list; falls back to a primary-only envelope. */
+function responseTracks(data) {
+  const tracks = Array.isArray(data?.tracks)
+    ? data.tracks.filter(track => track && typeof track === 'object' && track.provider !== 'lrclib_wordsync')
+    : [];
+  if (tracks.length || !data?.primary || typeof data.primary !== 'object') return tracks;
+  // Primary-only payload (fast partial): parse the primary track when it is
+  // not already duplicated inside `tracks`.
+  const primary = data.primary;
+  return tracks.some(track => canonicalProvider(track.provider) === canonicalProvider(primary.provider)) ? tracks : [primary, ...tracks];
+}
+
 export function parseLiriQoResponse(data, options = {}) {
   const durationMs = Math.max(0, Math.round((Number(options.duration ?? data?.metadata?.duration) || 0) * 1000));
   const settings = { ...options, durationMs, instrumentalGapMs: options.instrumentalGapMs ?? 5000 };
-  const tracks = (Array.isArray(data?.tracks) ? data.tracks : [])
-    .filter(track => track && typeof track === 'object' && track.provider !== 'lrclib_wordsync');
-  const parsed = tracks.map(track => ({ track, parsed: parseTrack(track, settings) }));
+  const tracks = responseTracks(data);
+  const parsed = tracks.map((track, index) => ({ track, index, parsed: parseTrack(track, settings) }));
   const eligible = item => item.parsed?.lyrics?.length &&
     (!durationMs || item.parsed.lyrics.every(line => line.isInstrumental || line.startTimeMs <= durationMs + 10000));
   const out = { richsynced: null, synced: null, plain: null, provider: null,
     syncedProvider: null, plainProvider: null, route: null };
-  const high = parsed.filter(item => eligible(item) && item.parsed.isWordSynced)
-    .sort((a, b) => rank(a.track, HIGH) - rank(b.track, HIGH))[0];
+  // Selection: 1) evidence-based sync quality (native granular wins), 2)
+  // canonical provider priority from the registry, 3) stable response order.
+  const quality = item => hasNativeGranular(item.parsed) ? 0 : 1;
+  const byPreference = (a, b) =>
+    quality(a) - quality(b) ||
+    providerRank(a.track.provider, HIGH) - providerRank(b.track.provider, HIGH) ||
+    a.index - b.index;
+  const high = parsed.filter(item => eligible(item) && item.parsed.isWordSynced).sort(byPreference)[0];
   if (high) {
     out.richsynced = resultFor(high.track, high.parsed);
     out.provider = high.track.provider;
     out.route = high.parsed.route;
   }
-  const synced = parsed.filter(eligible).sort((a, b) => rank(a.track, TEXT) - rank(b.track, TEXT))[0];
+  // Line-sync fallback keeps the canonical TEXT order (the richsynced winner
+  // above already captured the best word-tier result).
+  const synced = parsed.filter(eligible).sort((a, b) =>
+    providerRank(a.track.provider, TEXT) - providerRank(b.track.provider, TEXT) ||
+    a.index - b.index)[0];
   if (synced) {
-    const lineOnly = { ...synced.parsed, lyrics: synced.parsed.lyrics.map(({ parts, ...line }) => ({ ...line })) };
+    const lineOnly = { ...synced.parsed, lyrics: synced.parsed.lyrics.map(({ parts, granularity, ...line }) => ({ ...line })) };
     out.synced = resultFor(synced.track, lineOnly);
     out.syncedProvider = synced.track.provider;
     if (!out.route) out.route = synced.parsed.route;
     if (!out.provider) out.provider = synced.track.provider;
   }
-  for (const track of [...tracks].sort((a, b) => rank(a, TEXT) - rank(b, TEXT))) {
+  for (const track of [...tracks].sort((a, b) =>
+    providerRank(a.provider, CANONICAL_TEXT_ORDER) - providerRank(b.provider, CANONICAL_TEXT_ORDER))) {
     let content = isNonEmptyString(track.plain) ? track.plain : '';
     if (!content && isNonEmptyString(track.lrc)) content = stripLrcTimestamps(track.lrc);
     if (!content && Array.isArray(track.timed)) content = track.timed.filter(x => x && typeof x.text === 'string').map(x => x.text).join('\n');

@@ -47,7 +47,7 @@ test("Richsync accepts JSON or arrays and converts relative second offsets", () 
   const fixture = [{ ts: 1.234, te: 2.456, x: "Hello world", l: [{ c: "Hello ", o: 0 }, { c: "world", o: 0.444 }] }];
   const expected = [{
     text: "Hello world", start: 1234, end: 2456, id: 0,
-    words: [word("Hello ", 1234, 1678, { id: 0 }), word("world", 1678, 2456, { id: 1 })],
+    words: [word("Hello ", 1234, 1678, { id: 0, derivedEnd: true }), word("world", 1678, 2456, { id: 1, derivedEnd: true })],
     isCue: false, isInstrumental: false,
   }];
   assert.deepEqual(parseMusixmatchRichsync(fixture), expected);
@@ -63,7 +63,7 @@ test("Richsync preserves empty-fragment boundaries, text fallbacks, and stable s
   ]);
   assert.deepEqual(timed.map((entry) => entry.id), [0, 1, 2]);
   assert.equal(timed[0].text, "One two");
-  assert.deepEqual(timed[0].words, [word("One", 1000, 1500, { id: 0 }), word(" two", 2000, 3000, { id: 1 })]);
+  assert.deepEqual(timed[0].words, [word("One", 1000, 1500, { id: 0, derivedEnd: true }), word(" two", 2000, 3000, { id: 1, derivedEnd: true })]);
   assert.equal(timed[1].text, "[Chorus]");
   assert.equal(timed[1].isCue, true);
   assert.equal(timed[2].isInstrumental, true);
@@ -101,9 +101,10 @@ test("normalizer preserves exact line and native word milliseconds and metadata 
         { startTimeMs: 1234, durationMs: 433, words: "Hello ", agent: "v2", isBackground: true, explicit: true },
         { startTimeMs: 1701, durationMs: 755, words: "world" },
       ],
+      granularity: "word",
       agent: "v2", isInstrumental: false, isCue: false, isBackground: true, songPart: "Verse",
     }],
-    isWordSynced: true, language: "en", songwriters: ["Writer"],
+    isWordSynced: true, timingOrigin: "native", granularity: "word", language: "en", songwriters: ["Writer"],
   });
   assert.deepEqual(track, snapshot);
 });
@@ -142,8 +143,8 @@ test("normalizer rejects invalid lines and keeps plain text separate", () => {
   assert.equal(parsed.lyrics.length, 1);
   assert.equal(parsed.lyrics[0].words, "Fine");
   assert.equal(parsed.lyrics[0].durationMs, 1222);
-  assert.deepEqual(normalizedTrackToLyrics({ plain: "Plain text" }), { lyrics: [], isWordSynced: false, language: null, songwriters: null });
-  assert.deepEqual(normalizedTrackToLyrics(null), { lyrics: [], isWordSynced: false, language: null, songwriters: null });
+  assert.deepEqual(normalizedTrackToLyrics({ plain: "Plain text" }), { lyrics: [], isWordSynced: false, timingOrigin: null, granularity: null, language: null, songwriters: null });
+  assert.deepEqual(normalizedTrackToLyrics(null), { lyrics: [], isWordSynced: false, timingOrigin: null, granularity: null, language: null, songwriters: null });
 });
 
 test("normalizer preserves explicit flags and agents and does not call cue-only tracks word-synced", () => {

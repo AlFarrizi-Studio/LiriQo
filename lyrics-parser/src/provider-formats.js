@@ -1,3 +1,6 @@
+import { canonicalProvider } from "./registry.js";
+import { attachTranslations } from "./translations.js";
+
 const CREDIT_LABELS = new Set([
   "词", "作词", "曲", "作曲", "词曲", "编曲", "和声", "合声", "混音", "吉他", "制作人", "演唱", "原唱", "翻唱",
   "后期", "和音", "录音", "策划", "伴奏", "美工", "海报", "旁白", "贝斯", "鼓手", "键盘", "弦乐", "钢琴",
@@ -17,6 +20,9 @@ const PUNCTUATION_RE = /[()\[\]{},.!?;:'"<>/\\|~`@#$%^&*_+=]/g;
 function validTime(value) {
   return Number.isSafeInteger(value) && value >= 0;
 }
+
+/** Internal helpers shared with the raw provider parsers (kuwo/migu/petitlyrics). */
+export { validTime, isCueLine, isInstrumentalText, lyricLine };
 
 function isCueLine(text) {
   return !/[：:]/.test(text) && CUE_RE.test(text.trim().replace(PUNCTUATION_RE, "").trim());
@@ -110,11 +116,14 @@ export function parseMusixmatchRichsync(raw) {
       const parts = Array.from(entry.l);
       const valid = parts.every((part, i) => part && typeof part.c === "string" && typeof part.o === "number" && Number.isFinite(part.o) && part.o >= 0 && Math.round((entry.ts + part.o) * 1000) <= end && (i === 0 || part.o >= parts[i - 1].o));
       if (valid) {
+        // RichSync `o` offsets are NATIVE word/phrase starts; unit ends are
+        // DERIVED (next unit's start, or the line end for the last unit).
         words = parts.map((part, id) => ({
           text: part.c,
           start: Math.round((entry.ts + part.o) * 1000),
           end: id + 1 < parts.length ? Math.round((entry.ts + parts[id + 1].o) * 1000) : end,
           id,
+          derivedEnd: true,
         })).filter((word) => word.text.length).map((word, id) => ({ ...word, id }));
       }
     }
@@ -123,6 +132,18 @@ export function parseMusixmatchRichsync(raw) {
     timed.push(lyricLine(text, start, end, timed.length, words));
   }
   return sortLines(timed);
+}
+
+/** Classify the granularity of validated native units or output parts. */
+export function unitGranularity(units) {
+  const textOf = (unit) => unit?.text ?? unit?.words;
+  const nonempty = units.filter((unit) => textOf(unit)?.trim());
+  if (!nonempty.length) return "word";
+  if (nonempty.every((unit) => [...textOf(unit).trim()].length === 1)) return "character";
+  // A unit spanning several tokens is a phrase chunk, not a word (Musixmatch
+  // richsync coarse chunks) - honest downgrade without inventing splits.
+  if (nonempty.some((unit) => /\S\s+\S/u.test(textOf(unit).replace(/^\s+|\s+$/g, "")))) return "phrase";
+  return "word";
 }
 
 function nativeParts(words, line) {
@@ -143,7 +164,7 @@ function nativeParts(words, line) {
 
 function preservedFields(value) {
   const fields = {};
-  for (const key of ["agent", "isBackground", "isCue", "isInstrumental", "explicit", "songPart"]) {
+  for (const key of ["agent", "isBackground", "isCue", "isInstrumental", "explicit", "songPart", "derivedEnd", "nativeStart", "endTimingOrigin"]) {
     if (value[key] !== undefined) fields[key] = value[key];
   }
   return fields;
@@ -168,18 +189,21 @@ function addInstrumentals(lines, durationMs, gapMs) {
 
 export function normalizedTrackToLyrics(track, { durationMs, instrumentalGapMs = 5000 } = {}) {
   const input = track && typeof track === "object" ? track : {};
-  const topWords = Array.isArray(input.words) ? input.words : [];
+  const topWords = Array.isArray(input.words) || (input.words && typeof input.words === "object") ? input.words : [];
   const allowWords = input.nativeWordTiming !== false && input.provider !== "lrclib";
   const lyrics = [];
+  let granularities = [];
   for (const [index, line] of (Array.isArray(input.timed) ? input.timed : []).entries()) {
     if (!line || typeof line.text !== "string" || !line.text.trim() || !validTime(line.start) || !validTime(line.end) || line.end <= line.start) continue;
     const lineId = validTime(line.id) ? line.id : index;
-    const parts = allowWords ? nativeParts(line.words, line) ?? nativeParts(topWords[lineId], line) : null;
+    const parts = allowWords ? nativeParts(line.words, line) ?? nativeParts(topWords?.[lineId], line) : null;
+    const granularity = parts ? unitGranularity(parts) : null;
+    if (granularity && !line.isCue && !line.isInstrumental) granularities.push(granularity);
     lyrics.push({
       startTimeMs: line.start,
       durationMs: line.end - line.start,
       words: line.text,
-      ...(parts ? { parts } : {}),
+      ...(parts ? { parts, granularity } : {}),
       agent: line.agent ?? null,
       isInstrumental: line.isInstrumental ?? isInstrumentalText(line.text),
       isCue: line.isCue ?? isCueLine(line.text),
@@ -187,13 +211,61 @@ export function normalizedTrackToLyrics(track, { durationMs, instrumentalGapMs =
     });
   }
   lyrics.sort((a, b) => a.startTimeMs - b.startTimeMs);
+  // Translation alignment happens BEFORE instrumental insertion: LiriQo
+  // translations line up with the source timed[] lines, not with the
+  // instrumental-padded output.
+  attachTranslations(lyrics, input.translation);
   const isWordSynced = lyrics.some((line) => !line.isCue && !line.isInstrumental && line.parts?.some((part) => part.words.trim() && part.durationMs > 0));
   return {
     lyrics: addInstrumentals(lyrics, durationMs, instrumentalGapMs),
     isWordSynced,
+    timingOrigin: isWordSynced || input.timingOrigin === "native" ? "native" : null,
+    granularity: bestGranularity(granularities),
     language: typeof input.language === "string" && input.language.trim() ? input.language : null,
     songwriters: Array.isArray(input.songwriters) ? input.songwriters.filter((name) => typeof name === "string" && name.trim()) : null,
   };
+}
+
+/** Track granularity from real per-line evidence: word outranks character outranks phrase. */
+function bestGranularity(granularities) {
+  if (granularities.includes("word")) return "word";
+  if (granularities.includes("character")) return "character";
+  if (granularities.includes("phrase")) return "phrase";
+  return null;
+}
+
+/**
+ * Provider-agnostic normalizer for an already-normalized LiriQo track.
+ * Wraps {@link normalizedTrackToLyrics} and attaches evidence-based quality
+ * metadata (never trusting the server tier label alone):
+ *
+ *   {
+ *     lyrics, isWordSynced, language, songwriters,
+ *     timingOrigin: 'native'|null,     // 'native' only when unit timing validated
+ *                                      // or the server attested native line timing
+ *     granularity: 'word'|'character'|'phrase'|null,
+ *     tier: 'Jagorawi'|'Cipali'|'Bocimi',
+ *     provider: <canonical provider id>
+ *   }
+ *
+ * Derived/estimated timing (lrclib_wordsync) never reaches Jagorawi here:
+ * such tracks are rejected upstream of the sync pipeline and, even if hand-fed,
+ * their words are ignored by the normalizer (`provider !== "lrclib"` guard plus
+ * `nativeWordTiming !== false`).
+ *
+ * @param {object} track normalized LiriQo track (timed[]/words/lrc/ttml/...)
+ * @param {object} [options] { durationMs, instrumentalGapMs }
+ */
+export function normalizeProviderTrack(track, options = {}) {
+  const parsed = normalizedTrackToLyrics(track, options);
+  const provider = canonicalProvider(track?.provider) ?? null;
+  const hasNativeUnits = parsed.isWordSynced && parsed.timingOrigin === "native" && parsed.granularity !== "phrase";
+  const hasTimedLines = parsed.lyrics.some((line) => line.startTimeMs > 0 || line.durationMs > 0);
+  const tier = hasNativeUnits ? "Jagorawi"
+    : parsed.isWordSynced || (hasTimedLines && parsed.timingOrigin === "native") ? "Cipali"
+    : hasTimedLines || typeof track?.plain === "string" && track.plain.trim() || typeof track?.lrc === "string" && track.lrc.trim() ? "Bocimi"
+    : "Bocimi";
+  return { ...parsed, provider, tier };
 }
 
 const PROVIDER_NAMES = {
@@ -206,13 +278,17 @@ const PROVIDER_NAMES = {
   qqmusic: "QQ Music",
   kugou_legato: "KuGou",
   kugou: "KuGou",
+  kuwo: "Kuwo Music",
+  migu: "Migu Music",
   netease: "NetEase Cloud Music",
   musixmatch: "Musixmatch",
+  musixmatch_richsync: "Musixmatch",
   lrclib: "LRCLib",
   unison_community: "Unison",
   unison: "Unison",
   ytm_line: "YouTube Music",
   ytm: "YouTube Music",
+  petitlyrics: "PetitLyrics",
 };
 
 function metadataString(value) {
