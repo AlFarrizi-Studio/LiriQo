@@ -6,19 +6,19 @@
 
 <h1>🎧 LiriQo Lyrics API</h1>
 
-<p><strong>One API. Eight lyric providers. Native karaoke timing.</strong></p>
-<p>Get <strong>syllable</strong>, <strong>word</strong>, <strong>line</strong>, or <strong>plain</strong> lyrics in a normalized format — with accurate timing and upstream attribution when available.</p>
+<p><strong>One API. Eleven lyric providers. Native karaoke timing.</strong></p>
+<p>Get <strong>syllable</strong>, <strong>word</strong>, <strong>character</strong>, <strong>line</strong>, or <strong>plain</strong> lyrics in a normalized format — with accurate timing and upstream attribution when available.</p>
 
 <p>
   <a href="https://api-liriqo.web.app/"><img alt="Live Demo" src="https://img.shields.io/badge/Live_Demo-7c3aed?style=for-the-badge" /></a>
   <a href="https://api.liriqo-alfarrizi.my.id/v1"><img alt="API v1" src="https://img.shields.io/badge/API-v1-0ea5e9?style=for-the-badge" /></a>
-  <a href="#providers"><img alt="8 Providers" src="https://img.shields.io/badge/Providers-8-22c55e?style=for-the-badge" /></a>
-  <a href="lyrics-parser/README.md"><img alt="Client Parser 1.1.0" src="https://img.shields.io/badge/Client_Parser-1.1.0-f59e0b?style=for-the-badge" /></a>
+  <a href="#providers"><img alt="11 Providers" src="https://img.shields.io/badge/Providers-11-22c55e?style=for-the-badge" /></a>
+  <a href="lyrics-parser/README.md"><img alt="Client Parser 1.2.0" src="https://img.shields.io/badge/Client_Parser-1.2.0-f59e0b?style=for-the-badge" /></a>
 </p>
 <p>
-  <a href="https://github.com/AlFarrizi-Studio/LiriQo/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/AlFarrizi-Studio/LiriQo?style=flat-square&amp;logo=github&amp;label=release" /></a>
-  <a href="https://github.com/AlFarrizi-Studio/LiriQo/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/AlFarrizi-Studio/LiriQo?style=flat-square&amp;logo=github&amp;label=stars" /></a>
-  <a href="https://github.com/AlFarrizi-Studio/LiriQo/issues"><img alt="GitHub issues" src="https://img.shields.io/github/issues/AlFarrizi-Studio/LiriQo?style=flat-square&amp;logo=github&amp;label=issues" /></a>
+  <a href="https://github.com/AlFarrizi-Studio/LiriQo/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/AlFarrizi-Studio/LiriQo?style=flat-square&logo=github&label=release" /></a>
+  <a href="https://github.com/AlFarrizi-Studio/LiriQo/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/AlFarrizi-Studio/LiriQo?style=flat-square&logo=github&label=stars" /></a>
+  <a href="https://github.com/AlFarrizi-Studio/LiriQo/issues"><img alt="GitHub issues" src="https://img.shields.io/github/issues/AlFarrizi-Studio/LiriQo?style=flat-square&logo=github&label=issues" /></a>
 </p>
 
 <p><strong>
@@ -39,10 +39,10 @@ LiriQo brings lyrics from multiple music sources together through a single, deve
 
 | 🎤 Karaoke-ready | 🧭 Smart selection | 🔎 Flexible search | 🧩 Easy integration |
 | :--- | :--- | :--- | :--- |
-| Syllable/word timing, synced lines, and plain text | Prefers richer synchronization when available | Video ID, song metadata, ISRC, and supported URLs | JSON responses, format exports, and a client parser |
+| Syllable/character/word timing, synced lines, and plain text | Prefers richer synchronization when available | Video ID, song metadata, ISRC, and supported URLs | JSON responses, format exports, and a client parser |
 
-- 🎶 **Multiple lyric formats:** Apple Music TTML, Musixmatch richsync, NetEase YRC, KuGou KRC, QQ Music QRC, plus LRC and plain text.
-- 🏆 **Quality-aware results:** Native syllable/word timing, line-synced lyrics, and plain lyrics, with graceful fallback when a richer format is unavailable.
+- 🎶 **Multiple lyric formats:** Apple Music TTML, Musixmatch richsync, NetEase YRC, KuGou KRC, QQ Music QRC, Kuwo LRCX, Migu MRC, PetitLyrics WSY, plus LRC and plain text.
+- 🏆 **Quality-aware results:** Native syllable/character/word timing, line-synced lyrics, and plain lyrics, with graceful fallback when a richer format is unavailable.
 - 🌐 **One public API:** Use the same endpoint for search-based lyrics retrieval and normalized responses.
 - 🎙️ **Rich lyric metadata:** Singer agents, background vocals, translations, romanization, and source details where provided.
 - 🧩 **Client parser:** Integrate ready-to-render lyrics into JavaScript applications.
@@ -117,15 +117,18 @@ Use embedded `timed[].words` first, with top-level `words[line.id]` as a compati
 
 ## 🎼 Providers
 
-LiriQo integrates **8 lyric providers**. LyricFind can appear as an attributed lyric source through YouTube Music; it is **not** a separate direct provider.
+LiriQo integrates **11 lyric providers**. LyricFind can appear as an attributed lyric source through YouTube Music; it is **not** a separate direct provider.
 
 | Provider | `provider` ID | Available lyric types | Notes |
 | --- | --- | --- | --- |
 | 🍎 **Apple Music** | `apple_music_liriqo` | `syllable`, `word`, `line`, `plain` | TTML lyrics with singer and background-vocal details where available. |
-| 🎤 **Musixmatch** | `musixmatch` | `word` | Native richsync lyrics when available. |
+| 🎤 **Musixmatch** | `musixmatch` | `word` | Native richsync lyrics when available. Live richsync access requires authorized operator configuration and remains disabled in the current production deployment. |
 | 🤝 **Unison** | `unison_community` | `syllable`, `line`, `plain` | Community-contributed TTML, LRC, or plain lyrics; availability depends on the submission. |
 | ☁️ **NetEase Cloud Music** | `netease` | `word`, `line`, `plain` | Native YRC timing when available; LRC/plain alternatives. |
+| 🌸 **PetitLyrics** | `petitlyrics` | `character`, `word`, `line`, `plain` | WSY/XML per-character timing decoded server-side; Japanese and Latin lyrics preserved without forcing word segmentation. |
 | 🎶 **KuGou** | `kugou_legato` | `word`, `line` | KRC-based word timing and synced lyrics. |
+| 🐺 **Kuwo** | `kuwo` | `character`, `word`, `line`, `plain` | LRCX decoded server-side into native per-character/word timing; CJK text and punctuation preserved; LRC/plain fallback. |
+| 🎵 **Migu** | `migu` | `character`, `word`, `line`, `plain` | MRC timing decoded server-side; translation attached only when line counts match. |
 | 🎧 **QQ Music** | `qq_portato` | `word`, `line` | QRC word timing; translation or romanization may be included. |
 | 📚 **LRCLib** | `lrclib` | `line`, `plain` | LRC synced lyrics and plain text; no native word timing. |
 | ▶️ **YouTube Music** | `ytm_line` | `line`, `plain` | Synced or plain lyrics with upstream source attribution where available. |
@@ -133,7 +136,7 @@ LiriQo integrates **8 lyric providers**. LyricFind can appear as an attributed l
 > [!IMPORTANT]
 > **Supported formats are not guaranteed for every song.** Results depend on music catalog matching and source availability. Always check `syncLevel` and confirm that timing data is usable before enabling synchronized highlighting.
 
-A response can contain fewer than eight tracks, and some queries may return no usable lyric results.
+A response can contain fewer than eleven tracks, and some queries may return no usable lyric results.
 
 ## 🏆 Sync levels
 
@@ -141,11 +144,18 @@ LiriQo groups lyrics into three quality levels:
 
 | Tier | `syncLevel` | Best for |
 | --- | --- | --- |
-| 🥇 **Jagorawi** | `syllable` or `word` | Karaoke-style word and syllable highlighting |
+| 🥇 **Jagorawi** | `syllable` or `word` | Karaoke-style word, syllable, and character highlighting |
 | 🥈 **Cipali** | `line` | Highlighting the current lyric line |
 | 🥉 **Bocimi** | `plain` | Lyrics display without playback synchronization |
 
-When multiple results are available, LiriQo generally prefers more detailed synchronization while maintaining a fallback to line-based or plain lyrics. Word and syllable tracks share the same top tier; the exact provider selected can depend on the song.
+When multiple results are available, LiriQo generally prefers more detailed synchronization while maintaining a fallback to line-based or plain lyrics. Word, syllable, and character tracks share the same top tier; the exact provider selected can depend on the song.
+
+By default LiriQo uses **quality-aware timing**: it returns the best verified result promptly while keeping a bounded window open for higher-tier providers when only line timing is available. Two optional query parameters let you tune this behavior:
+
+| Parameter | Effect |
+| --- | --- |
+| `fast=1` | Optimize for latency: return the best verified result within a short budget. May include fewer provider candidates; check the optional `partial` field. |
+| `full=1` | Optimize for completeness: gather results from every eligible provider within the global deadline before responding. |
 
 For synchronized karaoke effects, use the `/lyrics` JSON response so your app can access native word timing. The `/lrc` endpoint is intended for line-synced lyric export, while `/ttml` returns an existing TTML representation when one is available.
 
@@ -177,6 +187,8 @@ These parameters apply to **`/lyrics`**; other endpoints can accept a smaller su
 | `album` | `BE` | Optional album information. |
 | `isrc` | `QM7282022872` | Recording identifier for additional matching. |
 | `url` / `link` | YouTube or Spotify track URL | Supported music link resolution; coverage varies. |
+| `fast` | `1` | Latency-first mode: return the best verified result within a bounded budget instead of waiting for every provider. |
+| `full` | `1` | Completeness-first mode: wait for all eligible providers within the global deadline. |
 
 ```sh
 curl --get "https://api.liriqo-alfarrizi.my.id/v1/lyrics" --data-urlencode "isrc=QM7282022872"
@@ -222,6 +234,8 @@ The `/lyrics` endpoint returns a ranked provider list and a selected `primary` t
   "count": 1,
   "tookMs": 1200,
   "tier": "Jagorawi",
+  "mode": "full",
+  "partial": false,
   "primary": {
     "provider": "netease",
     "syncLevel": "word",
@@ -241,6 +255,7 @@ The `/lyrics` endpoint returns a ranked provider list and a selected `primary` t
           "text": "Hello world",
           "start": 1000,
           "end": 3000,
+          "granularity": "word",
           "words": [
             { "text": "Hello ", "start": 1000, "end": 1800 },
             { "text": "world", "start": 1900, "end": 3000 }
@@ -253,6 +268,8 @@ The `/lyrics` endpoint returns a ranked provider list and a selected `primary` t
 ```
 
 The example abbreviates `primary`; actual responses include the full selected track there. Additional optional response fields may be present. `tookMs` reports processing time and is not the complete client round-trip latency.
+
+The optional `mode` field reports which fetching strategy produced the response (`fast`, `quality`, or `full`), and `partial` is `true` only when the result may be a subset of what a full run could find (possible with `fast=1`). Handle both fields gracefully — they are informational and may be absent in cached responses.
 
 ### ⏱️ Timing units
 
@@ -274,6 +291,7 @@ Keep native word ends and gaps intact. Do not multiply normalized timestamps by 
 | `provider` | LiriQo adapter ID from the provider table. |
 | `upstreamProvider`, `lyricsSource` | Actual upstream attribution when supplied; especially important for YouTube Music. |
 | `syncLevel`, `tier` | Timing granularity and quality tier. |
+| `granularity` | Optional per-line timing granularity where native unit evidence exists: `character`, `word`, or `phrase` (coarse multi-token units, such as some Musixmatch richsync chunks). |
 | `plain` | Plain lyric text. |
 | `timed[]` | Lines with `text`, `id`, `start`, `end` and optional embedded `words`. |
 | `words[]` | Optional top-level per-line word arrays, addressed by line ID. |
@@ -286,7 +304,7 @@ Raw `yrc`/`richsync` are accepted by the client parser when provided, but a resp
 
 ## 🧩 Lyrics parser
 
-The [client parser documentation](lyrics-parser/README.md) covers the complete API. It supports all eight adapter IDs and can also parse an already-fetched response offline.
+The [client parser documentation](lyrics-parser/README.md) covers the complete API. It supports all eleven adapter IDs and can also parse an already-fetched response offline.
 
 ```js
 import { getLiriQoLyrics, ApiError } from './lyrics-parser/src/index.js';
@@ -317,13 +335,13 @@ try {
 
 | Result | Content |
 | --- | --- |
-| `richsynced` | Native word/syllable `parts[]`, or `null`. |
+| `richsynced` | Native word/syllable/character `parts[]`, or `null`. |
 | `synced` | Line-synced lyrics without word parts, or `null`. |
 | `plain` | Unsynced text, or `null`. |
 | `provider`, `syncedProvider`, `plainProvider` | Selected adapter for each result slot. |
-| `route` | Parsed representation: `ttml`, `qrc`, `yrc`, `richsync`, `words`, `timed`, `lrc` or `plain`. |
+| `route` | Parsed representation: `ttml`, `qrc`, `yrc`, `krc`, `lrcx`, `mrc`, `wsy`, `richsync`, `words`, `timed`, `lrc` or `plain`. |
 
-The parser supports TTML, QRC, YRC, richsync, normalized word timing, LRC, and plain text. It checks for usable timing information and selects an appropriate representation for playback.
+The parser supports TTML, QRC, YRC, KRC, Kuwo LRCX, Migu MRC, PetitLyrics WSY, richsync, normalized word timing, LRC, and plain text. It checks for usable timing information and selects an appropriate representation for playback, labelling per-line `granularity` and derived timing honestly (for example, Musixmatch richsync unit ends are marked `derivedEnd: true`).
 
 Pass numeric seconds to the parser's `duration` option. The parser preserves native word boundaries and supports annotations such as background vocals and singer agents when the source provides them. Translation and romanization coverage depends on each provider.
 
@@ -372,7 +390,7 @@ Contributions, bug reports, and integration feedback are welcome via GitHub Issu
 
 | Project | Contribution |
 | --- | --- |
-| [LDDC](https://github.com/chenmozhijin/LDDC) | Lyrics format compatibility reference. |
+| [LDDC](https://github.com/chenmozhijin/LDDC) | Lyrics format compatibility reference (including Kuwo LRCX and Migu MRC decoding research). |
 | [qrc-decoder](https://github.com/apoint123/qrc-decoder) | QRC format research reference. |
 | [LRCLib](https://lrclib.net) | Open synced/plain lyrics database. |
 | [Unison](https://unison.boidu.dev) | Community lyric database. |
@@ -391,7 +409,7 @@ Follow the repository's growth on GitHub. If LiriQo helps your project, consider
 
  <picture>
 
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=alfarrizi-studio/liriqo&type=date&theme=dark&legend=bottom-right" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=alfarrizi-studio/liriqo&type=date&legend=bottom-right" />
 
    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=alfarrizi-studio/liriqo&type=date&legend=bottom-right" />
 
