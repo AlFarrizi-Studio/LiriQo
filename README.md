@@ -10,7 +10,7 @@
 <p>Get <strong>syllable</strong>, <strong>word</strong>, <strong>character</strong>, <strong>line</strong>, or <strong>plain</strong> lyrics in a normalized format — with accurate timing and upstream attribution when available.</p>
 
 <p>
-  <a href="https://api-liriqo.web.app/"><img alt="Live Demo" src="https://img.shields.io/badge/Live_Demo-7c3aed?style=for-the-badge" /></a>
+  <a href="https://status.liriqo-alfarrizi.my.id/"><img alt="Official Status Dashboard" src="https://img.shields.io/badge/Official_Status-Dashboard-16a34a?style=for-the-badge" /></a>
   <a href="https://api.liriqo-alfarrizi.my.id/v1"><img alt="API v1" src="https://img.shields.io/badge/API-v1-0ea5e9?style=for-the-badge" /></a>
   <a href="#providers"><img alt="11 Providers" src="https://img.shields.io/badge/Providers-11-22c55e?style=for-the-badge" /></a>
   <a href="lyrics-parser/README.md"><img alt="Client Parser 1.2.0" src="https://img.shields.io/badge/Client_Parser-1.2.0-f59e0b?style=for-the-badge" /></a>
@@ -22,6 +22,7 @@
 </p>
 
 <p><strong>
+  <a href="#service-status-and-uptime-monitoring">📡 Service Status</a> ·
   <a href="#quick-start">🚀 Quick Start</a> ·
   <a href="#providers">🎼 Providers</a> ·
   <a href="#api-reference">📡 API Reference</a> ·
@@ -32,6 +33,15 @@
 </div>
 
 ---
+
+> [!IMPORTANT]
+> **📢 UPD-003 · Status Dashboard Migration — November 12, 2026**
+>
+> The official LiriQo uptime monitoring page is now **[status.liriqo-alfarrizi.my.id](https://status.liriqo-alfarrizi.my.id/)**.
+>
+> The previous monitoring dashboard at **[api-liriqo.web.app](https://api-liriqo.web.app/)** will be **temporarily shut down until early December 2026**. Please update your bookmarks and monitoring links to the new status website.
+>
+> **The LiriQo API endpoint is not changing.** Continue using [`https://api.liriqo-alfarrizi.my.id/v1`](https://api.liriqo-alfarrizi.my.id/v1) for API requests.
 
 ## ✨ Overview
 
@@ -54,12 +64,30 @@ LiriQo brings lyrics from multiple music sources together through a single, deve
 
 | Get started | Documentation |
 | :--- | :--- |
-| [🚀 Quick start](#quick-start) | [📦 Response format](#response-format) |
-| [🎼 Providers](#providers) | [🧩 Lyrics parser](#lyrics-parser) |
-| [🏆 Sync levels](#sync-levels) | [🔄 How LiriQo works](#how-liriqo-works) |
-| [📡 API reference](#api-reference) | [💡 Usage guidelines](#usage-guidelines) |
-| [🎶 Lyrics inputs](#lyrics-inputs) | [🔗 Project links](#project-links) |
+| [📡 Service status](#service-status-and-uptime-monitoring) | [📦 Response format](#response-format) |
+| [🚀 Quick start](#quick-start) | [🧩 Lyrics parser](#lyrics-parser) |
+| [🎼 Providers](#providers) | [🔄 How LiriQo works](#how-liriqo-works) |
+| [🏆 Sync levels](#sync-levels) | [💡 Usage guidelines](#usage-guidelines) |
+| [📡 API reference](#api-reference) | [🔗 Project links](#project-links) |
+| [🎶 Lyrics inputs](#lyrics-inputs) | [📢 Releases](https://github.com/AlFarrizi-Studio/LiriQo/releases) |
 | [🚨 Errors & retries](#errors-and-retries) | [🙌 Credits](#credits) · [📄 License](#license) · [⭐ Star History](#star-history) |
+
+## 📡 Service status and uptime monitoring
+
+Use the **new official LiriQo Status Dashboard** to check the service's published availability and monitoring information:
+
+**🟢 Official status page:** [https://status.liriqo-alfarrizi.my.id/](https://status.liriqo-alfarrizi.my.id/)
+
+| Resource | Status / purpose |
+| --- | --- |
+| 📡 **New status dashboard** | [status.liriqo-alfarrizi.my.id](https://status.liriqo-alfarrizi.my.id/) — official status and uptime monitoring website |
+| ⚠️ **Previous monitoring website** | [api-liriqo.web.app](https://api-liriqo.web.app/) — scheduled for temporary shutdown until early December 2026 |
+| 🌐 **LiriQo API** | [api.liriqo-alfarrizi.my.id/v1](https://api.liriqo-alfarrizi.my.id/v1) — existing API base URL, unchanged |
+
+> [!NOTE]
+> **UPD-003 (November 12, 2026):** This change concerns the **monitoring website**, not the lyrics API itself. The previous dashboard's exact reopening date has not been announced. For status updates, use the new official domain.
+
+For release announcements, see [LiriQo GitHub Releases](https://github.com/AlFarrizi-Studio/LiriQo/releases).
 
 ## 🚀 Quick start
 
@@ -379,7 +407,8 @@ Whether you're building a music player, browser extension, or companion lyrics d
 | Resource | Link |
 | --- | --- |
 | 🌐 **API** | [LiriQo v1](https://api.liriqo-alfarrizi.my.id/v1) |
-| 🧪 **Live demo** | [Try LiriQo](https://api-liriqo.web.app/) |
+| 📡 **Official uptime status** | [LiriQo Status Dashboard](https://status.liriqo-alfarrizi.my.id/) |
+| ⚠️ **Previous monitoring dashboard** | [api-liriqo.web.app](https://api-liriqo.web.app/) — temporarily shutting down until early December 2026 |
 | 🧩 **Client parser** | [Parser documentation](lyrics-parser/README.md) |
 | 📢 **Releases** | [GitHub Releases](https://github.com/AlFarrizi-Studio/LiriQo/releases) |
 | 🐛 **Issues & feedback** | [GitHub Issues](https://github.com/AlFarrizi-Studio/LiriQo/issues) |
@@ -424,6 +453,6 @@ Follow the repository's growth on GitHub. If LiriQo helps your project, consider
 <div align="center">
 
 <p><strong>Made for developers building better lyric experiences. 🎶</strong></p>
-<p><a href="https://api.liriqo-alfarrizi.my.id/v1">🌐 API</a> · <a href="https://api-liriqo.web.app/">🧪 Live Demo</a> · <a href="https://github.com/AlFarrizi-Studio/LiriQo/issues">🐛 Report an issue</a> · <a href="#top">⬆️ Back to top</a></p>
+<p><a href="https://api.liriqo-alfarrizi.my.id/v1">🌐 API</a> · <a href="https://status.liriqo-alfarrizi.my.id/">📡 Status Dashboard</a> · <a href="https://github.com/AlFarrizi-Studio/LiriQo/issues">🐛 Report an issue</a> · <a href="#top">⬆️ Back to top</a></p>
 
 </div>
