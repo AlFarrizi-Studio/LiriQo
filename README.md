@@ -6,13 +6,13 @@
 
 <h1>🎧 LiriQo Lyrics API</h1>
 
-<p><strong>One API. Eleven lyric providers. Native karaoke timing.</strong></p>
-<p>Get <strong>syllable</strong>, <strong>word</strong>, <strong>character</strong>, <strong>line</strong>, or <strong>plain</strong> lyrics in a normalized format — with accurate timing and upstream attribution when available.</p>
+<p><strong>One API. Ten lyric providers. Native karaoke timing.</strong></p>
+<p>Get <strong>syllable</strong>, <strong>word</strong>, <strong>character</strong>, <strong>line</strong>, or <strong>plain</strong> lyrics in a normalized format — with accurate timing, complete metadata (year / album / duration / ISRC), and upstream attribution when available.</p>
 
 <p>
   <a href="https://status.liriqo-alfarrizi.my.id/"><img alt="Official Status Dashboard" src="https://img.shields.io/badge/Official_Status-Dashboard-16a34a?style=for-the-badge" /></a>
   <a href="https://api.liriqo-alfarrizi.my.id/v1"><img alt="API v1" src="https://img.shields.io/badge/API-v1-0ea5e9?style=for-the-badge" /></a>
-  <a href="#providers"><img alt="11 Providers" src="https://img.shields.io/badge/Providers-11-22c55e?style=for-the-badge" /></a>
+  <a href="#providers"><img alt="10 Providers" src="https://img.shields.io/badge/Providers-10-22c55e?style=for-the-badge" /></a>
   <a href="lyrics-parser/README.md"><img alt="Client Parser 1.2.0" src="https://img.shields.io/badge/Client_Parser-1.2.0-f59e0b?style=for-the-badge" /></a>
 </p>
 <p>
@@ -45,7 +45,7 @@
 
 ## ✨ Overview
 
-LiriQo brings lyrics from multiple music sources together through a single, developer-friendly API. Get normalized lyrics, timestamped lines, and native karaoke timing where available — with source attribution so your application can display the right credits.
+LiriQo brings lyrics from multiple music sources together through a single, developer-friendly API. Get normalized lyrics, timestamped lines, complete song metadata, and native karaoke timing where available — with source attribution so your application can display the right credits.
 
 | 🎤 Karaoke-ready | 🧭 Smart selection | 🔎 Flexible search | 🧩 Easy integration |
 | :--- | :--- | :--- | :--- |
@@ -53,6 +53,7 @@ LiriQo brings lyrics from multiple music sources together through a single, deve
 
 - 🎶 **Multiple lyric formats:** Apple Music TTML, Musixmatch richsync, NetEase YRC, KuGou KRC, QQ Music QRC, Kuwo LRCX, Migu MRC, PetitLyrics WSY, plus LRC and plain text.
 - 🏆 **Quality-aware results:** Native syllable/character/word timing, line-synced lyrics, and plain lyrics, with graceful fallback when a richer format is unavailable.
+- 🎚️ **Complete metadata:** Release **year**, **album**, **duration**, and **ISRC** are filled in when available (layered iTunes → Deezer → YouTube Music enrichment), selecting the original studio recording over remixes/live/covers.
 - 🌐 **One public API:** Use the same endpoint for search-based lyrics retrieval and normalized responses.
 - 🎙️ **Rich lyric metadata:** Singer agents, background vocals, translations, romanization, and source details where provided.
 - 🧩 **Client parser:** Integrate ready-to-render lyrics into JavaScript applications.
@@ -74,13 +75,13 @@ LiriQo brings lyrics from multiple music sources together through a single, deve
 
 ## 📡 Service status and uptime monitoring
 
-Use the **new official LiriQo Status Dashboard** to check the service's published availability and monitoring information:
+Use the **official LiriQo Status Dashboard** to check the service's published availability and monitoring information:
 
 **🟢 Official status page:** [https://status.liriqo-alfarrizi.my.id/](https://status.liriqo-alfarrizi.my.id/)
 
 | Resource | Status / purpose |
 | --- | --- |
-| 📡 **New status dashboard** | [status.liriqo-alfarrizi.my.id](https://status.liriqo-alfarrizi.my.id/) — official status and uptime monitoring website |
+| 📡 **Status dashboard** | [status.liriqo-alfarrizi.my.id](https://status.liriqo-alfarrizi.my.id/) — official status, uptime monitoring, provider stats, analytics, and request log |
 | ⚠️ **Previous monitoring website** | [api-liriqo.web.app](https://api-liriqo.web.app/) — scheduled for temporary shutdown until early December 2026 |
 | 🌐 **LiriQo API** | [api.liriqo-alfarrizi.my.id/v1](https://api.liriqo-alfarrizi.my.id/v1) — existing API base URL, unchanged |
 
@@ -145,26 +146,25 @@ Use embedded `timed[].words` first, with top-level `words[line.id]` as a compati
 
 ## 🎼 Providers
 
-LiriQo integrates **11 lyric providers**. LyricFind can appear as an attributed lyric source through YouTube Music; it is **not** a separate direct provider.
+LiriQo integrates **10 lyric providers**. LyricFind and Musixmatch can appear as attributed lyric sources through YouTube Music; they are **not** separate direct providers.
 
 | Provider | `provider` ID | Available lyric types | Notes |
 | --- | --- | --- | --- |
 | 🍎 **Apple Music** | `apple_music_liriqo` | `syllable`, `word`, `line`, `plain` | TTML lyrics with singer and background-vocal details where available. |
-| 🎤 **Musixmatch** | `musixmatch` | `word` | Native richsync lyrics when available. Live richsync access requires authorized operator configuration and remains disabled in the current production deployment. |
 | 🤝 **Unison** | `unison_community` | `syllable`, `line`, `plain` | Community-contributed TTML, LRC, or plain lyrics; availability depends on the submission. |
 | ☁️ **NetEase Cloud Music** | `netease` | `word`, `line`, `plain` | Native YRC timing when available; LRC/plain alternatives. |
 | 🌸 **PetitLyrics** | `petitlyrics` | `character`, `word`, `line`, `plain` | WSY/XML per-character timing decoded server-side; Japanese and Latin lyrics preserved without forcing word segmentation. |
 | 🎶 **KuGou** | `kugou_legato` | `word`, `line` | KRC-based word timing and synced lyrics. |
 | 🐺 **Kuwo** | `kuwo` | `character`, `word`, `line`, `plain` | LRCX decoded server-side into native per-character/word timing; CJK text and punctuation preserved; LRC/plain fallback. |
 | 🎵 **Migu** | `migu` | `character`, `word`, `line`, `plain` | MRC timing decoded server-side; translation attached only when line counts match. |
-| 🎧 **QQ Music** | `qq_portato` | `word`, `line` | QRC word timing; translation or romanization may be included. |
+| 🎧 **QQ Music** | `qq_portato` | `word`, `line`, `plain` | QRC word timing (primary WebAPI base64 LRC path, no 3DES) + translation/romanization where available. |
 | 📚 **LRCLib** | `lrclib` | `line`, `plain` | LRC synced lyrics and plain text; no native word timing. |
-| ▶️ **YouTube Music** | `ytm_line` | `line`, `plain` | Synced or plain lyrics with upstream source attribution where available. |
+| ▶️ **YouTube Music** | `ytm_line` | `line`, `plain` | Synced or plain lyrics with upstream source attribution (LyricFind / Musixmatch) where available. |
 
 > [!IMPORTANT]
 > **Supported formats are not guaranteed for every song.** Results depend on music catalog matching and source availability. Always check `syncLevel` and confirm that timing data is usable before enabling synchronized highlighting.
 
-A response can contain fewer than eleven tracks, and some queries may return no usable lyric results.
+A response can contain fewer than ten tracks, and some queries may return no usable lyric results.
 
 ## 🏆 Sync levels
 
@@ -200,7 +200,8 @@ The following endpoints are intended for client integrations. All paths are rela
 | `GET /plain` | JSON | Return plain lyric text using `v` or `videoId`. |
 | `GET /ttml` | Text | Return an available TTML lyric document using `v` or `videoId`; `404` if unavailable. |
 | `GET /search` | JSON | Find song metadata using a video ID, query, or ISRC. |
-| `GET /metadata` / `GET /resolve` | JSON | Alternative metadata lookup routes. |
+| `GET /stats` | JSON | Request log, provider stats, latency percentiles, tier distribution, cache hit ratio, and embedded-source counters. |
+| `GET /health` | JSON | Health check (`?upstream=1` for upstream connectivity test). |
 
 ### 🎶 Lyrics inputs
 
@@ -256,8 +257,10 @@ The `/lyrics` endpoint returns a ranked provider list and a selected `primary` t
   "metadata": {
     "title": "Dynamite",
     "artist": "BTS",
+    "album": "BE",
     "duration": 199,
-    "isrc": "QM7282022872"
+    "isrc": "QM7282022872",
+    "year": "2020"
   },
   "count": 1,
   "tookMs": 1200,
